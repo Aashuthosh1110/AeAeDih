@@ -166,7 +166,7 @@ The benchmarking suite uses a C orchestration program that invokes compiled exec
 Due to the exponential nature of the problem, we employ a split methodology:
 
 * **Realtime ($N \le 13$):** The suite executes Bogosort in real-time. $N=13$ is established as the **Computation Horizon**, where 5 trials take roughly 1-2 hours.
-* **Theoretical ($N = 14$ to $N = 20$):** To demonstrate scaling beyond the computation horizon, we generate theoretical timing values for Bogosort up to $N=20$. These are extrapolated from the last real data point ($N=13$) using the factorial recurrence relation to visualize the "Complexity Wall" against the completed Bubble/Merge sort benchmarks.
+* **Theoretical ($N \le 20$):** To demonstrate scaling beyond the computation horizon, we generate theoretical timing values for Bogosort up to $N=20$. These are extrapolated using the factorial recurrence relation to visualize the "Complexity Wall" against the completed Bubble/Merge sort benchmarks.
 
 ---
 
