@@ -1,0 +1,28 @@
+* File structure
+
+The python files are what run and evaluate the algorithms, which are implemented in the C++ files. There is a singular PNG file with runtime plots.
+
+* Running code
+
+While you can run the C++ files individually with specific I/O formats, it's more advisable to just run
+#+begin_src sh
+  python3 benchmark.py
+#+end_src
+and wait for 5 years (jk it's like 5 mins) for the complete testing to finish.
+
+If the C++ files absolutely have to be run, the I/O formats are as follows:
+For both files, input newline-separated points which are space-separated coordinates. The output will be a similarly separated set of points which form the convex hull. There will also be a line before it about the time taken to compute the hull itself.
+#+begin_src
+  Input:
+  
+  x_1 y_1
+  ...
+  x_n y_n
+
+  Output:
+
+  Time: t
+  x_i y_i
+  ...
+  x_j y_j
+#+end_src
