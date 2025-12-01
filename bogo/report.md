@@ -168,6 +168,15 @@ Due to the exponential nature of the problem, we employ a split methodology:
 * **Realtime ($N \le 13$):** The suite executes Bogosort in real-time. $N=13$ is established as the **Computation Horizon**, where 5 trials take roughly 1-2 hours.
 * **Theoretical ($N \le 20$):** To demonstrate scaling beyond the computation horizon, we generate theoretical timing values for Bogosort up to $N=20$. These are extrapolated using the factorial recurrence relation to visualize the "Complexity Wall" against the completed Bubble/Merge sort benchmarks.
 
+**Derivation of the Extrapolation Formula:**
+While the total time complexity is $O(n \cdot n!)$, the transition from $N-1$ to $N$ can be approximated as follows:
+
+$$ \frac{T(n)}{T(n-1)} \approx \frac{n \cdot n!}{(n-1) \cdot (n-1)!} = \frac{n}{n-1} \cdot n $$
+
+For large $N$, the term $\frac{n}{n-1} \approx 1$. Therefore, the growth is dominated by the factorial term $n$. For the purpose of our theoretical projection, we utilize the simplified recurrence relation:
+
+$$T(n) \approx T(n-1) \times n$$
+
 ---
 
 ## 6. Results and Analysis
