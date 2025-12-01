@@ -272,52 +272,127 @@ Both algorithms were implemented in C.
 \chapter{Miller-Rabin Primality Test}
 
 \section{Abstract}
-This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The Miller-Rabin algorithm achieves $O(k \log^3 n)$ time complexity, vastly superior to Trial Division's $O(\sqrt{n})$ for large integers.
+This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The algorithm achieves $O(k \log^3 n)$ time complexity, vastly superior to Trial Division's $O(\sqrt{n})$ for large integers. Our implementation handles 64-bit integers with overflow protection via 128-bit intermediate calculations and employs MT19937-64 for high-quality random witness selection. Experimental results demonstrate Miller-Rabin maintains microsecond-level execution times across 20-64 bit inputs while Trial Division exhibits exponential slowdown beyond 48 bits. Error analysis on Carmichael numbers shows empirical false positive rates well below the theoretical $4^{-k}$ bound, with all achieving 0\% error by $k=4$.
+
+\section{Introduction}
+Primality testing determines whether a given integer $n$ is prime or composite—a fundamental problem in cryptography. RSA encryption, digital signatures, and key generation require efficient methods to test large primes. Traditional deterministic methods like Trial Division become prohibitive for cryptographic-scale integers. The Miller-Rabin test is the industry standard for cryptographic primality testing, used in RSA key generation, cryptocurrency systems, and TLS/SSL certificate generation. The ability to test primality in polylogarithmic time enables modern public-key cryptography.
 
 \section{Algorithm Description}
 
 \subsection{Theoretical Foundation}
-The Miller-Rabin test is a randomized Monte Carlo algorithm. It improves upon Fermat's test by checking for non-trivial square roots of unity modulo $n$.
-For odd integer $n$, express $n-1 = 2^r \cdot d$. For random base $a$:
-\begin{enumerate}
-    \item \textbf{Fermat Condition:} $a^d \equiv 1 \pmod n$
-    \item \textbf{Square Root Condition:} $a^{2^j d} \equiv -1 \pmod n$ for some $0 \le j < r$
-\end{enumerate}
-If neither holds, $n$ is composite.
-\textbf{Error Probability:} $P(\text{Error in } k \text{ rounds}) \le 4^{-k}$.
+The Miller-Rabin test is a randomized Monte Carlo algorithm determining whether $n$ is composite or "probably prime." It improves upon Fermat's test by checking for non-trivial square roots of unity modulo $n$, detecting Carmichael numbers that fool simpler tests.
 
-\subsection{Complexity}
-\begin{itemize}
-    \item \textbf{Time Complexity:} $T(n) = O(k \log^3 n)$. This polylogarithmic complexity enables instant primality testing of large numbers.
-    \item \textbf{Space Complexity:} $O(1)$ auxiliary space.
-\end{itemize}
+For odd integer $n$, express $n-1 = 2^r \cdot d$ where $d$ is odd. For random base $a$ ($1 < a < n-1$), $n$ is "probably prime" if either:
+\begin{enumerate}
+    \item \textbf{Fermat Condition:} $a^d \equiv 1 \pmod{n}$
+    \item \textbf{Square Root Condition:} $a^{2^j d} \equiv -1 \pmod{n}$ for some $0 \le j < r$
+\end{enumerate}
+Otherwise, $a$ is a "strong witness" and $n$ is definitively composite.
+
+For composite $n$, at most $(n-1)/4$ bases are "strong liars." Error probability: $P(\text{Error in } k \text{ rounds}) \le 4^{-k}$.
+
+\subsection{Complexity Analysis}
+\textbf{Time Complexity:} Each round performs modular exponentiation with cost $O(\log^3 n)$. For $k$ iterations: $T(n) = O(k \log^3 n)$. This polylogarithmic complexity enables instant primality testing of large numbers.
+
+\textbf{Space Complexity:} $O(1)$ auxiliary space—all calculations reuse constant 64/128-bit variables.
 
 \section{Implementation Details}
+
+\subsection{Programming Environment}
+\textbf{Language:} C++11 with GCC \texttt{-O3} optimization. \textbf{Core algorithm uses only standard libraries} (\texttt{<cstdint>}, \texttt{<random>}, \texttt{<chrono>}). SymPy/matplotlib used for benchmarking infrastructure only.
+
+\subsection{Key Design Choices}
+
+\textbf{1. Overflow Protection:} Uses \texttt{unsigned \_\_int128} for intermediate calculations to prevent silent overflow in 64-bit modular multiplication.
+
+\textbf{2. High-Quality RNG:} MT19937-64 provides $2^{19937}-1$ period vs standard \texttt{rand()}, critical for probabilistic reliability.
+
+\textbf{3. Modular Architecture:} Core algorithm (\texttt{src/miller\_rabin.cpp/hpp}), baseline comparison (\texttt{src/trial\_division.cpp/hpp}), batch processing (\texttt{src/main\_batch.cpp}), dataset generation (\texttt{scripts/generate\_datasets.py}), visualization (\texttt{scripts/plot\_results.py}), and one-command automation (\texttt{run\_pipeline.sh}).
+
+\subsection{Implementation Challenges}
+\textbf{Challenge:} 64-bit overflow in modular multiplication. \textbf{Solution:} \texttt{unsigned \_\_int128} casting prevents silent overflow across entire \texttt{uint64\_t} range—a subtle bug most implementations miss.
+
+\section{Experimental Setup}
+\textbf{Environment:} AMD Ryzen x86-64, Linux (Ubuntu), GCC C++11, Python 3.12.
+
+\textbf{Datasets:} All synthetically generated via SymPy:
 \begin{itemize}
-    \item \textbf{Overflow Protection:} Uses \texttt{unsigned \_\_int128} casting for intermediate modular multiplications to prevent 64-bit overflow.
-    \item \textbf{RNG:} Used \texttt{std::mt19937\_64} for high-quality random witness selection.
-    \item \textbf{Modular Exponentiation:} Square-and-Multiply algorithm used for $O(\log \text{exp})$.
+    \item \textbf{Carmichael Numbers:} 5 composites (561, 1105, 1729, 2465, 6601) for error analysis
+    \item \textbf{Trial Division Primes:} 80 primes (20-50 bits) for baseline comparison
+    \item \textbf{Miller-Rabin Primes:} 60 primes (20-64 bits) for full-range scaling
+    \item \textbf{K-Scaling:} Single 64-bit prime tested with $k=1..50$ (100 iterations each)
 \end{itemize}
+
+\textbf{Metrics:} Wall-clock time (microseconds), False Positive Rate (FPR), bit length, linear regression $R^2$.
 
 \section{Results \& Analysis}
 
-\subsection{Runtime Performance}
-\begin{itemize}
-    \item \textbf{Trial Division:} Exhibits exponential growth ($O(\sqrt{n})$). Hit a "wall" at 48+ bits.
-    \item \textbf{Miller-Rabin:} Maintains flat $O(k \log^3 n)$ profile. Microsecond-level execution for 64-bit inputs.
-\end{itemize}
+\subsection{Runtime Performance: The "Exponential Wall"}
+Trial Division tested on 20-50 bits (80 cases); Miller-Rabin on 20-64 bits with $k=5$ (60 cases, 1000 iterations averaged).
 
 \begin{figure}[H]
     \centering
-    % Ensure this file exists
     \includegraphics[width=0.85\textwidth]{miller_rabin_runtime.png}
-    \caption{Runtime comparison: Trial Division vs Miller-Rabin}
+    \caption{Runtime comparison (log-log scale). Trial Division exhibits $O(\sqrt{n})$ exponential growth; Miller-Rabin maintains flat $O(k \log^3 n)$ profile.}
     \label{fig:mr_runtime}
 \end{figure}
 
+\textbf{Key Findings:} At 20-30 bits, both algorithms show comparable sub-millisecond performance. Trial Division slows to 2-30 ms at 32-40 bits, hits a "wall" at 48+ bits (seconds per test), and becomes impractical at 64 bits. Miller-Rabin maintains microsecond-level execution across the entire range. Experimental results validate theoretical complexity—Trial Division's $O(2^{L/2})$ exponential growth vs Miller-Rabin's $O(k \log^3 n)$ polylogarithmic scaling becomes stark beyond 40 bits.
+
 \subsection{Error Rate Analysis: Carmichael Numbers}
-Tested on 5 Carmichael numbers (561, 1105, 1729, 2465, 6601).
-\textbf{Key Finding:} All converged to 0\% error by $k=4$, far exceeding the theoretical guarantee of $4^{-k}$.
+Five Carmichael numbers (561, 1105, 1729, 2465, 6601) tested with 10,000 trials per ($k$, number) for $k=1..10$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{miller_rabin_error.png}
+    \caption{Individual Carmichael FPR vs theoretical $4^{-k}$ bound (log scale). All reach 0\% by $k=4$.}
+    \label{fig:mr_error}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\textbf{k} & \textbf{Theoretical} & \textbf{561} & \textbf{1105} & \textbf{1729} \\
+\hline
+1 & 25.0\% & $\sim$1.2\% & $\sim$2.5\% & $\sim$1.5\% \\
+2 & 6.25\% & $\sim$0.1\% & $\sim$0.3\% & $\sim$0.2\% \\
+3 & 1.56\% & 0\% & 0\% & 0\% \\
+\hline
+\end{tabular}
+\caption{Empirical FPR vs Theoretical Bound}
+\label{tab:carmichael}
+\end{table}
+
+Theoretical $4^{-k}$ bound is worst-case; actual strong liar density varies per composite. Individual numbers show different $k=1$ FPR reflecting varying distributions. All converge to 0\% by $k=4$, far exceeding theoretical guarantee.
+
+\subsection{Linear Scaling with k}
+Single 64-bit prime tested with $k=1..50$ (100 iterations per $k$).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{miller_rabin_k_scaling.png}
+    \caption{Execution time vs $k$ with linear regression ($R^2 > 0.99$).}
+    \label{fig:mr_k_scaling}
+\end{figure}
+
+Perfect linearity ($R^2 > 0.99$) confirms $O(k)$ scaling. Slope: $\sim$4-5 $\mu$s per iteration. Trade-off: doubling $k$ doubles runtime but quadruples reliability. Recommended values: $k=5$ ($\sim$25 $\mu$s, 0.1\% error), $k=10$ ($\sim$50 $\mu$s, $10^{-5}$ error), $k=20$ ($\sim$100 $\mu$s, cryptographic grade), $k=40$ ($<$1 ms, RSA standard). Even $k=40$ completes sub-millisecond.
+
+\section{Conclusion}
+Successfully implemented and validated Miller-Rabin: (1) $O(k \log^3 n)$ complexity confirmed vs $O(\sqrt{n})$ Trial Division baseline, (2) microsecond execution across all bit sizes vs exponential slowdown, (3) empirical FPR exceeds theoretical guarantees (0\% by $k=4$), (4) linear $O(k)$ scaling enables flexible security-performance trade-offs.
+
+\textbf{Limitations:} 64-bit range (cryptographic needs 1024+ bits), limited Carmichael sample, hardware-specific timing, no deterministic variant comparison.
+
+\textbf{Future Work:} Arbitrary-precision arithmetic (GMP), deterministic Miller test, multi-threaded parallelization, GPU acceleration, broader composite testing.
+
+\section{Bonus Disclosure}
+\textbf{Bonus 1:} 64-bit overflow protection (\texttt{\_\_int128})—subtle bug most miss, ensures correctness across entire \texttt{uint64\_t} range.
+
+\textbf{Bonus 2:} MT19937-64 RNG—superior $2^{19937}-1$ period vs \texttt{rand()}, critical for probabilistic reliability.
+
+\textbf{Bonus 3:} Automated reproducible pipeline—complete infrastructure with one-command automation (\texttt{run\_pipeline.sh}).
+
+\textbf{Bonus 4:} Individual number analysis—tracks each Carmichael number separately, reveals strong liar density variations.
 
 \newpage
 
