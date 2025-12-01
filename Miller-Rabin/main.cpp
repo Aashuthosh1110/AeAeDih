@@ -8,7 +8,6 @@
 #include <cmath>     // For log2 and floor
 #include <limits>    // For numeric_limits
 #include <algorithm> // For std::max
-#include <fstream>   // For file output (CSV)
 
 // Local includes for your project files
 #include "miller_rabin.hpp"  
@@ -112,109 +111,6 @@ void run_speed_benchmark(const std::vector<TestCase>& tests) {
 }
 
 
-// --- CSV Generation Functions ---
-
-void generate_runtime_comparison_csv() {
-    std::ofstream outfile("runtime_comparison.csv");
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Could not open runtime_comparison.csv for writing.\n";
-        return;
-    }
-
-    outfile << "BitSize,Number,TrialDivTime,MillerRabinTime\n";
-    std::cout << "Generating runtime_comparison.csv with worst-case prime numbers...\n";
-
-    std::vector<uint64_t> benchmarks = {
-        1009,                  // ~10 bit
-        65521,                 // ~16 bit
-        16769023,              // ~24 bit
-        4294967291ULL,         // ~32 bit
-        1099511627689ULL,      // ~40 bit
-        281474976710597ULL,    // ~48 bit
-        72057594037927931ULL,  // ~56 bit
-        18446744073709551557ULL // ~64 bit (Max)
-    };
-    
-    const int MR_AVG_ITER = 1000;
-
-    for (uint64_t n : benchmarks) {
-        int bits = get_bit_count(n);
-        double time_td = -1.0; // Default to -1 (skipped)
-
-        // --- Time Trial Division (only for numbers <= 32 bits) ---
-        if (bits <= 32) {
-            clock_t start_td = clock();
-            trial_division(n);
-            clock_t end_td = clock();
-            time_td = (double)(end_td - start_td) / CLOCKS_PER_SEC;
-        }
-
-        // --- Time Miller-Rabin (Averaged) ---
-        clock_t start_mr = clock();
-        for (int i = 0; i < MR_AVG_ITER; ++i) {
-            is_prime_miller_rabin(n, 5);
-        }
-        clock_t end_mr = clock();
-        double time_mr = ((double)(end_mr - start_mr) / CLOCKS_PER_SEC) / MR_AVG_ITER;
-
-        outfile << bits << "," << n << "," << time_td << "," << time_mr << "\n";
-        std::cout << "Completed " << bits << "-bit benchmark\n";
-    }
-    std::cout << "Finished: runtime_comparison.csv\n";
-}
-
-void generate_error_analysis_csv() {
-    std::ofstream outfile("error_analysis.csv");
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Could not open error_analysis.csv for writing.\n";
-        return;
-    }
-
-    outfile << "K_Iterations,FalsePositiveRate\n";
-    std::cout << "Generating error_analysis.csv...\n";
-
-    const uint64_t N = 1729; // A known Carmichael number
-    const uint32_t TOTAL_TRIALS = 100000;
-
-    for (int k = 1; k <= 10; k++) {
-        uint32_t false_positives = 0;
-        for (uint32_t i = 0; i < TOTAL_TRIALS; i++) {
-            if (is_prime_miller_rabin(N, k)) {
-                false_positives++;
-            }
-        }
-        double actual_fpr = (double)false_positives / TOTAL_TRIALS;
-        outfile << k << "," << actual_fpr << "\n";
-    }
-    std::cout << "Finished: error_analysis.csv\n";
-}
-
-void generate_parameter_sensitivity_csv() {
-    std::ofstream outfile("parameter_sensitivity.csv");
-    if (!outfile.is_open()) {
-        std::cerr << "Error: Could not open parameter_sensitivity.csv for writing.\n";
-        return;
-    }
-
-    outfile << "K_Iterations,ExecutionTime\n";
-    std::cout << "Generating parameter_sensitivity.csv...\n";
-
-    const uint64_t LARGE_PRIME = 18446744073709551557ULL; // A large 64-bit prime
-    const int AVG_ITERATIONS = 200000; // Increased for smoother graph
-
-    for (int k = 1; k <= 50; k++) {
-        clock_t start = clock();
-        for(int i = 0; i < AVG_ITERATIONS; ++i) {
-            is_prime_miller_rabin(LARGE_PRIME, k);
-        }
-        clock_t end = clock();
-        double avg_time = ((double)(end - start) / CLOCKS_PER_SEC) / AVG_ITERATIONS;
-        outfile << k << "," << avg_time << "\n";
-    }
-    std::cout << "Finished: parameter_sensitivity.csv\n";
-}
-
-
 int main() {
     // Note: We rely on the Mersenne Twister engine being seeded in miller_rabin.cpp,
     // so std::srand(time(NULL)) is not strictly necessary but harmless.
@@ -233,7 +129,6 @@ int main() {
         std::cout << "1. Speed Benchmark (Miller-Rabin vs. Trial Division)\n";
         std::cout << "2. Miller-Rabin Empirical Error Rate Analysis\n";
         std::cout << "3. Exit\n";
-        std::cout << "4. Batch Generate CSV Data\n";
         std::cout << "Enter your choice: ";
         
         if (!(std::cin >> main_choice)) {
@@ -362,12 +257,6 @@ int main() {
         } else if (main_choice == 3) {
             std::cout << "Exiting program.\n";
             break;
-        } else if (main_choice == 4) {
-            std::cout << "\nGenerating batch CSV data...\n";
-            generate_runtime_comparison_csv();
-            generate_error_analysis_csv();
-            generate_parameter_sensitivity_csv();
-            std::cout << "Finished generating all CSV files.\n";
         } else {
             std::cerr << "Invalid choice. Please try again.\n";
         }
