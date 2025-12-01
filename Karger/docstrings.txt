@@ -1,0 +1,149 @@
+0. This file contains docstrings for the functions in Basic Karger's and Karger-Stein's implementations, as well as the Python scripts used for running experiments and plotting results.
+0. IT IS JUST IN CASE ANY CODE IS TO BE THOUGHT INSUFFICIENTLY/INAPPROPRIATELY DOCSTRINGED.
+    1. Basic Karger's Algorithm (benchmark.cpp / Implementation.cpp)
+    1.1 struct Edge
+        Description: A simple structure to represent an undirected edge in the graph.
+
+        Members:
+
+        int u: The source vertex index.
+
+        int v: The destination vertex index.
+
+    1.2 struct Graph
+        Description: A structure to represent the graph using an edge list.
+
+    Members:
+
+        int V: The total number of vertices in the graph.
+        std::vector<Edge> edges: A dynamic array storing all edges of the graph.
+
+    Methods:
+
+    1.3 bool loadFromFile(const std::string& filename):
+
+        Purpose: Reads graph data (vertex count, edge count, and edge list) from a specified text file.
+
+        Input: filename (string) - Path to the input file.
+
+        Output: bool - Returns true if the file was successfully opened and read, false otherwise.
+
+    1.4 struct DSU
+        Description: Implements the Disjoint Set Union (Union-Find) data structure to efficiently manage sets of vertices (supernodes).
+
+    Methods:
+
+    1.5 DSU(int n):
+
+        Purpose: Constructor. Initializes n disjoint sets, where each element is its own parent.
+
+        Input: n (int) - Number of elements.
+
+    1.6 int find(int i):
+
+        Purpose: Finds the representative (root) of the set containing element i. Implements path compression.
+
+        Input: i (int) - The element to find.
+        Output: int - The representative of the set containing i.
+
+    1.7 void unite(int i, int j):
+
+        Purpose: Merges the set containing element i with the set containing element j.
+
+        Input: i (int), j (int) - The elements whose sets are to be merged.
+        
+
+    1.8 int kargerSingleRun(const Graph& g):
+        Purpose: Executes a single run of Karger's random contraction algorithm.
+        
+        Input: g (const Graph&) - The input graph (passed by const reference to avoid modification, though internal logic effectively works on a copy or uses DSU).
+
+        Output: int - The size of the cut found (the number of edges between the final two supernodes).
+
+        Logic:
+
+        Initializes a DSU structure with V vertices.
+        Repeatedly selects a random edge (u, v).
+        If u and v are in different sets (supernodes), unions them and decrements the supernode count.
+        Stops when only 2 supernodes remain.
+        Counts and returns the number of original edges connecting the two final supernodes.
+
+    1.9 int kargerMinCut(const Graph& original_graph, int iterations):
+        Purpose: Runs Karger's algorithm multiple times to find the minimum cut with high probability.
+
+        Input:
+
+        original_graph (const Graph&) - The graph to analyze.
+        iterations (int) - The number of times to repeat the single run (T).
+
+        Output: int - The minimum cut size found across all iterations.
+
+    2. Karger-Stein Algorithm (benchmark_stein.cpp / stein_runtime.cpp)
+    2.1 Graph contractTo(Graph g, int k)
+        Purpose: Randomly contracts the graph g until only k vertices (supernodes) remain. This is a helper function for the recursive Karger-Stein algorithm.
+
+        Input:
+        g (Graph) - The graph to contract (passed by value to work on a copy).
+        k (int) - The target number of vertices to stop at.
+
+        Output: Graph - The contracted graph containing k vertices (and potential parallel edges/self-loops handled internally).
+
+        Logic:
+
+        While the number of vertices > k:
+        Pick a random edge.
+        If it's a self-loop, discard it.
+        Contract the edge vertices.
+        Update the graph structure (relabeling vertices).
+        Updates the vertex count of the graph before returning.
+
+    2.2 int recursiveMinCut(Graph g)
+        Purpose: Implements the recursive Karger-Stein algorithm to find the minimum cut.
+
+        Input: g (Graph) - The graph to analyze.
+
+        Output: int - The minimum cut size found.
+
+        Logic:
+        Base Case: If the graph has 6 or fewer vertices, run basic contraction down to 2 vertices and return the cut size.
+
+        Recursive Step:
+
+        Calculate t = ceil(1 + n / sqrt(2)).
+        Branch 1: Contract g down to t vertices to get g1, then recursively call recursiveMinCut(g1).
+        Branch 2: Contract g (a fresh copy) down to t vertices to get g2, then recursively call recursiveMinCut(g2).
+        Return the minimum result from Branch 1 and Branch 2.
+
+    2.3 int runKargerStein(const Graph& g, int iterations) (in karger-stein.cpp / benchmark_stein.cpp)
+        Purpose: Wrapper function to run the full Karger-Stein recursive algorithm multiple times.
+
+        Input:
+        g (const Graph&) - The input graph.
+        iterations (int) - The number of times to run the full recursive process.
+        
+        Output: int - The minimum cut size found across all runs.
+
+    3. Python Scripts (graph.py / graph2.py / plot_stein_runtime.py)
+    run_runtime_experiment(cpp_executable, file_list) (in graph.py)
+        Purpose: Automates the execution of the C++ benchmark program to measure runtime across multiple datasets.
+    Input:
+
+    cpp_executable (str) - Path to the compiled C++ binary.
+
+    file_list (list of str) - List of dataset filenames (e.g., ["n10.txt", "n20.txt"]).
+
+    Output: str - The raw CSV-formatted output string captured from the C++ program's standard output.
+
+    run_success_rate_experiment() (in graph2.py)
+    Purpose: Automates the execution of the C++ program to measure the success rate of finding the min cut over varying iteration counts.
+
+    Input: None (uses global configuration variables CPP_EXECUTABLE, FILE_TO_TEST, etc.).
+
+    Output: str - The raw CSV-formatted output string (Iterations vs. Success Rate).
+
+    plot_runtime_data(csv_data) (in graph.py) / plot_success_rate_data(csv_data) (in graph2.py)
+    Purpose: Parses the CSV string and generates a Matplotlib graph.
+
+    Input: csv_data (str) - The CSV string captured from the C++ program.
+
+    Output: None (Saves a .png image file to disk).
