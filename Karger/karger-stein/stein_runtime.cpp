@@ -30,7 +30,7 @@ struct Graph {
     }
 };
 
-
+// --- Karger-Stein Logic ---
 Graph contractTo(Graph g, int k) {
     int current_vertices = g.V;
     while (current_vertices > k && !g.edges.empty()) {
@@ -38,7 +38,7 @@ Graph contractTo(Graph g, int k) {
         int u = g.edges[idx].u;
         int v = g.edges[idx].v;
         
-      
+        // Handle self-loops
         if (u == v) {
             g.edges.erase(g.edges.begin() + idx);
             continue;
@@ -52,13 +52,13 @@ Graph contractTo(Graph g, int k) {
         g.edges.erase(g.edges.begin() + idx);
     }
     
-   
-    g.V = current_vertices; 
+    // --- THE FIX IS HERE ---
+    g.V = current_vertices; // <--- Update the vertex count!
     return g;
 }
 
 int recursiveMinCut(Graph g) {
-   
+    // Safety check for disconnected graphs
     if (g.edges.empty()) return 0;
 
     if (g.V <= 6) {
@@ -66,11 +66,12 @@ int recursiveMinCut(Graph g) {
     }
     
     int t = std::ceil(1.0 + g.V / 1.41421356);
-
+    
+    // Branch 1
     Graph g1 = contractTo(g, t);
     int res1 = recursiveMinCut(g1);
     
-  
+    // Branch 2 (start from fresh copy of g)
     Graph g2 = contractTo(g, t);
     int res2 = recursiveMinCut(g2);
 
@@ -87,14 +88,14 @@ int main() {
         Graph g;
         if (!g.loadFromFile(filename)) continue;
 
-        
+        // Run 100 iterations for reliability timing
         int iterations = 100; 
 
         auto start = std::chrono::high_resolution_clock::now();
         
         int min_cut = 999999;
         for(int i=0; i<iterations; ++i) {
-            
+            // Pass by value (copy) is handled by function signature
             int res = recursiveMinCut(g);
             if(res < min_cut) min_cut = res;
         }

@@ -7,6 +7,7 @@
 #include <fstream>
 #include <cmath>
 
+// --- DATA STRUCTURES ---
 struct Edge {
     int u, v;
 };
@@ -31,34 +32,34 @@ struct Graph {
     }
 };
 
+// --- KARGER-STEIN LOGIC ---
 
-
-
+// Helper: Contracts graph g down to k vertices
 Graph contractTo(Graph g, int k) {
     int current_vertices = g.V;
     while (current_vertices > k && !g.edges.empty()) {
-       
+        // Pick random edge
         int idx = rand() % g.edges.size();
         int u = g.edges[idx].u;
         int v = g.edges[idx].v;
 
-        
+        // If self-loop, remove and retry
         if (u == v) {
             g.edges.erase(g.edges.begin() + idx);
             continue;
         }
 
-       
+        // Contract v into u
         current_vertices--;
         for (auto& edge : g.edges) {
             if (edge.u == v) edge.u = u;
             if (edge.v == v) edge.v = u;
         }
-       
+        // Remove the edge we just contracted
         g.edges.erase(g.edges.begin() + idx);
     }
     
-  
+    // Clean up self-loops
     std::vector<Edge> clean;
     for(auto& e : g.edges) {
         if(e.u != e.v) clean.push_back(e);
@@ -68,31 +69,31 @@ Graph contractTo(Graph g, int k) {
     return g;
 }
 
-
+// The Recursive Function
 int recursiveMinCut(Graph g) {
     int n = g.V;
     
-   
+    // Base case: small graphs just contract to 2
     if (n <= 6) {
         Graph final_g = contractTo(g, 2);
         return final_g.edges.size();
     }
 
-  
-    int t = std::ceil(1.0 + n / 1.41421356);
+    // Recursive step
+    int t = std::ceil(1.0 + n / 1.41421356); // n / sqrt(2)
 
-
+    // Branch 1
     Graph g1 = contractTo(g, t);
     int res1 = recursiveMinCut(g1);
 
- 
-    Graph g2 = contractTo(g, t); 
+    // Branch 2
+    Graph g2 = contractTo(g, t); // Note: contractTo makes random choices, so g2 != g1
     int res2 = recursiveMinCut(g2);
 
     return std::min(res1, res2);
 }
 
-
+// --- TEST HARNESS (Matches benchmark.cpp) ---
 
 void runSuccessRateExperiment() {
     std::string filename;
@@ -112,7 +113,7 @@ void runSuccessRateExperiment() {
     
     std::cout << "Iterations,SuccessRate" << std::endl;
 
-  
+    // We test the same T values as before
     std::vector<int> T_values = {1, 5, 10, 20, 50, 100, 150};
 
     for (int T : T_values) {
@@ -120,7 +121,7 @@ void runSuccessRateExperiment() {
         for (int i = 0; i < num_trials; ++i) {
             int min_found = 999999;
             
-            
+            // "Iteration" here means one full run of the recursive algorithm
             for(int k=0; k<T; ++k) {
                 int val = recursiveMinCut(g);
                 if(val < min_found) min_found = val;
@@ -138,7 +139,7 @@ void runSuccessRateExperiment() {
 int main() {
     srand(time(NULL));
     int choice;
-    std::cin >> choice;
+    std::cin >> choice; // Consume the menu choice "2" sent by python
     runSuccessRateExperiment();
     return 0;
 }
