@@ -2,6 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <random>
+#include <chrono>
 #include <cmath>
 #include <iomanip>
 
@@ -84,17 +85,19 @@ vector<Point> randomized_incremental_hull(vector<Point>& points) {
     while (cross_product(lower_tangent->p, lower_tangent->next->p, pt) < -EPS)
       lower_tangent = lower_tangent->next;
 
-    Node* new_node = new Node{pt, upper_tangent->prev, lower_tangent->next};
-    upper_tangent->prev->next = new_node;
-    lower_tangent->next->prev = new_node;
+    // Connect the new node to the upper and lower tangents
+    Node* new_node = new Node{pt, upper_tangent, lower_tangent};
+    
+    Node* start_delete = upper_tangent->next;
+    
+    upper_tangent->next = new_node;
+    lower_tangent->prev = new_node;
         
-    // Delete the nodes that are now inside the new hull
-    Node* current_to_delete = upper_tangent;
-    while (true) {
+    // Delete the nodes strictly between upper_tangent and lower_tangent
+    Node* current_to_delete = start_delete;
+    while (current_to_delete != lower_tangent) {
       Node* next_to_delete = current_to_delete->next;
       delete current_to_delete;
-      if (current_to_delete == lower_tangent)
-        break;
       current_to_delete = next_to_delete;
     }
         
@@ -112,11 +115,13 @@ vector<Point> randomized_incremental_hull(vector<Point>& points) {
     } while (current != start_node);
 
     current = start_node;
-    do {
+    while (true) {
       Node* next_node = current->next;
       delete current;
+      if (next_node == start_node)
+        break;
       current = next_node;
-    } while (current != start_node);
+    }
   }
     
   return result;
@@ -134,7 +139,11 @@ int main() {
   if (points.empty())
     return 0;
 
+  auto start = chrono::high_resolution_clock::now();
   vector<Point> hull_points = randomized_incremental_hull(points);
+  auto end = chrono::high_resolution_clock::now();
+  chrono::duration<double> diff = end - start;
+  cerr << "Time: " << diff.count() << " s" << endl;
 
   // Sort hull points for canonical output (starting from the lowest-then-leftmost point)
   if (!hull_points.empty()) {
