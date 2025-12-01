@@ -10,7 +10,9 @@
 
 ## Directory structure
 
-- `alg/` contains implementations of algorithms chosen
-- `eval/` contains scripts required for empirical evaluation of these algorithms
-- `assets/` contains any other auxiliary files required
-- `proposal/` and `report/` are self-explanatory and contain no code
+- `<Algorithm-Name>` contains implementations of algorithms chosen and the relevant scripts for their evaluation (note the Pascal/Kebab case)
+- `main_report/` contains the final report and all relevant images.
+
+## Code running
+
+If you want to run code (first of all, why?) check the algorithm-wise READMEs in their respective folders.
