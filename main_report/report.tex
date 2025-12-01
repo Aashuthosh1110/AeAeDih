@@ -1,0 +1,580 @@
+\documentclass[12pt, a4paper]{report}
+
+% ===================================================================
+% PACKAGES
+% ===================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{geometry}
+\usepackage{amsmath, amssymb, amsthm} % For math symbols
+\usepackage{graphicx}       % For images
+\usepackage{hyperref}       % For clickable links
+\usepackage{booktabs}       % For nice tables
+\usepackage{float}          % For [H] placement
+\usepackage{setspace}       % For line spacing
+\usepackage{titlesec}       % For header formatting
+\usepackage{fancyhdr}       % For headers/footers
+\usepackage{listings}       % For code snippets
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% Configuration
+\geometry{left=25mm, right=25mm, top=25mm, bottom=25mm}
+\onehalfspacing
+
+% Hyperlink setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=blue,
+    citecolor=black
+}
+
+% Chapter Title Formatting
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries}{}{0pt}{\Huge}
+
+% ===================================================================
+% DOCUMENT START
+% ===================================================================
+\begin{document}
+
+% -------------------------------------------------------------------
+% TITLE PAGE
+% -------------------------------------------------------------------
+\begin{titlepage}
+    \centering
+    \vspace*{2cm}
+    
+    {\Huge \textbf{Comparative Analysis of Randomized vs. Deterministic Algorithms}}
+    
+    \vspace{1.5cm}
+    {\Large \textbf{Final Project Report}}
+    
+    \vspace{1.5cm}
+    {\Large \textbf{Course:} Advanced Algorithm Design}
+    
+    \vspace{2cm}
+    
+    \textbf{\Large Team: Aashutosh S. Sharma}
+    
+    \vspace{1cm}
+    \textit{\large Team Members:} \\
+    \vspace{0.5cm}
+    1. Shoaib Ahmed \\
+    2. Nihar Manoj Gupta \\
+    3. Aashutosh Sharma \\
+    4. Ronith Menneni \\
+    5. Druhan Shah
+    
+    \vfill
+    {\Large December 2, 2025}
+    
+\end{titlepage}
+
+% -------------------------------------------------------------------
+% FRONT MATTER
+% -------------------------------------------------------------------
+\begin{abstract}
+This project intends to study and compare randomized algorithms with respect to their deterministic counterparts. Often, introducing an element of randomness into an algorithm can yield on average better results than deterministically exhausting all possibilities. 
+
+Randomized algorithms can be classified into two named categories:
+\begin{itemize}
+    \item \textbf{Las Vegas Algorithms:} Those which are guaranteed to yield the correct answer but have a probabilistic runtime (e.g., Bogosort, Randomized QuickSort, RIC).
+    \item \textbf{Monte Carlo Algorithms:} Those which always terminate in a fixed amount of time but have a bounded probability of error (e.g., Miller-Rabin, Karger's Min Cut).
+\end{itemize}
+
+This comprehensive report aggregates the analysis of five distinct algorithms: Bogosort, Randomized QuickSort, Miller-Rabin Primality Test, Karger's Min Cut, and Randomized Incremental Construction for Convex Hulls. We provide theoretical proofs, runtime/error analyses, and empirical verification on procedurally generated inputs.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% -------------------------------------------------------------------
+% CHAPTER 1: INTRODUCTION
+% -------------------------------------------------------------------
+\chapter{Introduction}
+
+\section{Premise}
+This project intends to study and compare randomized algorithms with respect to their deterministic counterparts. Often, introducing an element of randomness into an algorithm can yield on average better results than deterministically exhausting all possibilities. Of course, there are downsides to using such algorithms, which manifest mainly in two different ways, which result in a classification of randomized algorithms into two named categories.
+
+\section{Classification}
+Randomized algorithms can be \textbf{Las Vegas algorithms} (those which are guaranteed to yield the correct answer but in a significantly longer amount time in the worst case) or \textbf{Monte Carlo Algorithms} (those which always terminate in no more than a certain amount of time, but have a chance of failing). While runtime is used to compare and analyze Las Vegas algorithms, error rate is used to compare Monte Carlo algorithms, since their likelihood of being correct is dependent on how long (as in, for how many iterations) they are run. This project shall analyze algorithms of both kinds.
+
+\section{Methodology}
+As part of this project, we have implemented the selected algorithms from scratch, provided their proofs and runtime/error analyses, and verified the theoretical results empirically by repeatedly testing these algorithms on procedurally generated inputs. The empirical verification was done sufficiently many times in order to obtain a reasonably robust estimate of the average runtime and/or expected error.
+
+\newpage
+
+% ===================================================================
+% ALGORITHM 1: BOGOSORT
+% ===================================================================
+\chapter{Analysis of Bogosort}
+
+\section{Introduction}
+\textbf{Bogosort} (also known as Permutation Sort, Stupid Sort, or Monkey Sort) stands as the archetypal example of the "generate and test" paradigm applied to the sorting problem.
+
+While often regarded as a pedagogical joke or a theoretical curiosity, Bogosort provides a critical boundary condition for the study of randomized algorithms. It serves as a \textbf{Las Vegas algorithm} that, while guaranteeing a correct output, possesses a runtime distribution that is theoretically unbounded and practically intractable for all but the smallest inputs.
+
+The analysis of Bogosort necessitates a rigorous engagement with probability theory, specifically the properties of the \textbf{geometric distribution}, the factorial growth of permutation groups ($S_n$), and the mechanics of pseudorandom number generation (PRNG).
+
+\section{Classification and Theoretical Foundations}
+
+\subsection{Randomized Algorithms: Las Vegas vs. Monte Carlo}
+To understand Bogosort, one must first situate it within the taxonomy of randomized algorithms. Unlike deterministic algorithms, which follow a fixed execution path for a given input, randomized algorithms incorporate a source of entropy (random bits) to guide their execution.
+
+\begin{itemize}
+    \item \textbf{Monte Carlo Algorithms:} These algorithms have a deterministic runtime bound but a probabilistic correctness guarantee. They may produce an incorrect result with a small probability.
+    \item \textbf{Las Vegas Algorithms:} These algorithms guarantee a correct result upon termination, but their runtime is a random variable. They "gamble" with time rather than accuracy.
+\end{itemize}
+
+\textbf{Note:} Bogosort is a \textbf{Las Vegas algorithm}. It will never return an unsorted list (correctness is guaranteed by the verification step), but the time required to find the sorted permutation is probabilistic.
+
+\subsection{The Generate-and-Test Paradigm}
+Bogosort operates on the extreme end of the "generate and test" spectrum. Constructive algorithms, such as Insertion Sort, build the solution incrementally. Divide-and-conquer algorithms, like Merge Sort, break the problem into tractable sub-problems. In contrast, Bogosort attempts to guess the entire solution in a single operation.
+
+The algorithm's structure is defined by the following loop:
+\begin{verbatim}
+while (!is_sorted(list)) {
+    shuffle(list);
+}
+\end{verbatim}
+
+This loop implies two distinct phases per iteration:
+\begin{enumerate}
+    \item \textbf{Generation:} Creating a random permutation from the symmetric group $S_n$ (the set of all $n!$ permutations).
+    \item \textbf{Verification:} Checking for monotonic order.
+\end{enumerate}
+The inefficiency arises because the size of the search space ($S_n$) grows factorially, while the number of valid solutions is exactly \textbf{1} (assuming distinct elements).
+
+\subsection{The Infinite Monkey Theorem and Termination}
+The theoretical justification for running Bogosort lies in the \textbf{Infinite Monkey Theorem}. To prove termination, we consider the probability space. Let $A$ be an array of $n$ distinct elements.
+\begin{itemize}
+    \item Total Permutations: $n!$
+    \item Probability of success in one trial ($p$): $p = \frac{1}{n!}$
+\end{itemize}
+
+Since trials are independent, the probability of failure in a single trial is $q = 1 - p$. The probability that the algorithm has not terminated after $k$ iterations is $q^k$:
+\[ P(\text{Not sorted after } k \text{ steps}) = \left(1 - \frac{1}{n!}\right)^k \]
+As $k \to \infty$, this probability approaches 0. Thus, the algorithm terminates \textbf{almost surely} (with probability 1).
+
+\section{Probabilistic Analysis of Runtime and Variance}
+The runtime of Bogosort is dominated by the number of shuffles required to reach the sorted state. This follows a \textbf{Geometric Distribution}.
+
+\subsection{Derivation of Expected Runtime}
+Let $X$ be a random variable representing the number of shuffles performed. $X$ follows a geometric distribution with success probability $p = 1/n!$. The expected value $E[X]$ is:
+\[ E[X] = \frac{1}{p} = n! \]
+Since each shuffle and check operation takes $O(n)$ time, the total expected time complexity $T_{avg}$ is:
+\[ T_{avg}(n) = O(n) \cdot E[X] = O(n \cdot n!) \]
+
+\subsection{Derivation of Variance and Standard Deviation}
+The variance of a geometric distribution is given by:
+\[ Var(X) = \frac{1-p}{p^2} \approx (n!)^2 \]
+The standard deviation $\sigma$ is:
+\[ \sigma = \sqrt{Var(X)} \approx n! \]
+This is a crucial insight: \textbf{the standard deviation of Bogosort's runtime is approximately equal to its expected runtime.} This indicates extreme volatility.
+
+\subsection{The Memoryless Property}
+A defining characteristic of the geometric distribution is that it is \textbf{memoryless}.
+\[ P(X > m+n \mid X > m) = P(X > n) \]
+Past failures do not influence future probabilities. The algorithm does not "make progress."
+
+\section{Empirical Methodology}
+To validate the theoretical bounds, a rigorous benchmarking experiment was conducted using a \textbf{Hybrid Empirical-Theoretical Approach}.
+\begin{itemize}
+    \item \textbf{Control Group (Bubble/Merge Sort):} Benchmarked for the full range of $N=2$ to $N=20$.
+    \item \textbf{Bogosort (Statistical Smoothing):} Averaged over 20 trials for small inputs to mitigate variance.
+    \item \textbf{Hybrid Extrapolation:} For $N > 13$, we utilized the recurrence relation $T(n) \approx T(n-1) \times n$ to project runtimes.
+\end{itemize}
+
+\section{Results and Analysis}
+The empirical results confirm the "complexity cliff" predicted by theory.
+\begin{itemize}
+    \item $N=9$: Milliseconds.
+    \item $N=11$: Seconds.
+    \item $N=12$: Minutes.
+    \item $N=13$: $\approx$ 20 minutes per trial.
+    \item $N=20$: Extrapolated runtime $> 70,000$ years.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    % Ensure this file exists in your folder
+    \includegraphics[width=0.9\textwidth]{bogosort_graph.png}
+    \caption{Bogosort Benchmark Graph showing factorial growth.}
+    \label{fig:bogosort}
+\end{figure}
+
+\newpage
+
+% ===================================================================
+% ALGORITHM 2: RANDOMIZED QUICKSORT
+% ===================================================================
+\chapter{Comparative Analysis of Normal and Randomized QuickSort}
+
+\section{Abstract}
+This project investigates the theoretical and empirical performance of two widely used sorting algorithms: deterministic QuickSort and randomized QuickSort. Although both algorithms share the same fundamental divide-and-conquer structure, their pivot-selection strategies lead to significant differences in performance, especially on adversarial or structured inputs.
+
+\section{Introduction}
+Sorting plays a central role in computer science. QuickSort is favored in practice because of its excellent average-case performance. However, its performance depends critically on the choice of pivot at each recursive step.
+This project studies two variants:
+\begin{enumerate}
+    \item \textbf{Normal (Deterministic) QuickSort:} Chooses a fixed pivot such as the last element.
+    \item \textbf{Randomized QuickSort:} Selects the pivot uniformly at random.
+\end{enumerate}
+
+\section{Algorithm Descriptions}
+
+\subsection{Deterministic (Normal) QuickSort}
+This version selects a fixed pivot—typically the last element of the array.
+\begin{itemize}
+    \item \textbf{Best/Average Case:} $O(n \log n)$
+    \item \textbf{Worst Case:} $O(n^2)$ — occurs when input is already sorted or reverse-sorted.
+    \item \textbf{Space Complexity:} $O(\log n)$ expected, $O(n)$ worst case.
+\end{itemize}
+
+\subsection{Randomized QuickSort}
+This version selects the pivot uniformly at random from the subarray.
+\begin{itemize}
+    \item \textbf{Expected Time:} $O(n \log n)$
+    \item \textbf{Worst Case:} $O(n^2)$, but highly unlikely.
+    \item \textbf{Space Complexity:} Same as deterministic.
+\end{itemize}
+
+\subsection{Partition Scheme Choice (Lomuto vs. Hoare)}
+Initial implementations used Lomuto partition, but it performed extremely poorly on arrays containing many repeated values. To avoid this, the final implementation uses \textbf{Hoare partition}, which:
+\begin{itemize}
+    \item Moves two indices inward, swapping out-of-place elements.
+    \item Handles duplicates cleanly.
+    \item Produces significantly more balanced partitions.
+\end{itemize}
+
+\section{Implementation Details}
+Both algorithms were implemented in C.
+\begin{itemize}
+    \item \textbf{Pivot for Deterministic:} Last element.
+    \item \textbf{Pivot for Randomized:} Random index swapped with the last element.
+    \item \textbf{Partitioning:} Hoare partition chosen to avoid degenerate behavior.
+\end{itemize}
+
+\section{Results \& Analysis}
+\begin{itemize}
+    \item \textbf{Deterministic QuickSort:} Performs well on random data but shows severe slowdown ($O(n^2)$) on sorted and reverse-sorted arrays.
+    \item \textbf{Randomized QuickSort (Hoare Partition):} Performance remains consistently close to $O(n \log n)$ across all input types. Handles duplicates efficiently.
+\end{itemize}
+
+\newpage
+
+% ===================================================================
+% ALGORITHM 3: MILLER-RABIN
+% ===================================================================
+\chapter{Miller-Rabin Primality Test}
+
+\section{Abstract}
+This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The Miller-Rabin algorithm achieves $O(k \log^3 n)$ time complexity, vastly superior to Trial Division's $O(\sqrt{n})$ for large integers.
+
+\section{Algorithm Description}
+
+\subsection{Theoretical Foundation}
+The Miller-Rabin test is a randomized Monte Carlo algorithm. It improves upon Fermat's test by checking for non-trivial square roots of unity modulo $n$.
+For odd integer $n$, express $n-1 = 2^r \cdot d$. For random base $a$:
+\begin{enumerate}
+    \item \textbf{Fermat Condition:} $a^d \equiv 1 \pmod n$
+    \item \textbf{Square Root Condition:} $a^{2^j d} \equiv -1 \pmod n$ for some $0 \le j < r$
+\end{enumerate}
+If neither holds, $n$ is composite.
+\textbf{Error Probability:} $P(\text{Error in } k \text{ rounds}) \le 4^{-k}$.
+
+\subsection{Complexity}
+\begin{itemize}
+    \item \textbf{Time Complexity:} $T(n) = O(k \log^3 n)$. This polylogarithmic complexity enables instant primality testing of large numbers.
+    \item \textbf{Space Complexity:} $O(1)$ auxiliary space.
+\end{itemize}
+
+\section{Implementation Details}
+\begin{itemize}
+    \item \textbf{Overflow Protection:} Uses \texttt{unsigned \_\_int128} casting for intermediate modular multiplications to prevent 64-bit overflow.
+    \item \textbf{RNG:} Used \texttt{std::mt19937\_64} for high-quality random witness selection.
+    \item \textbf{Modular Exponentiation:} Square-and-Multiply algorithm used for $O(\log \text{exp})$.
+\end{itemize}
+
+\section{Results \& Analysis}
+
+\subsection{Runtime Performance}
+\begin{itemize}
+    \item \textbf{Trial Division:} Exhibits exponential growth ($O(\sqrt{n})$). Hit a "wall" at 48+ bits.
+    \item \textbf{Miller-Rabin:} Maintains flat $O(k \log^3 n)$ profile. Microsecond-level execution for 64-bit inputs.
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    % Ensure this file exists
+    \includegraphics[width=0.85\textwidth]{miller_rabin_runtime.png}
+    \caption{Runtime comparison: Trial Division vs Miller-Rabin}
+    \label{fig:mr_runtime}
+\end{figure}
+
+\subsection{Error Rate Analysis: Carmichael Numbers}
+Tested on 5 Carmichael numbers (561, 1105, 1729, 2465, 6601).
+\textbf{Key Finding:} All converged to 0\% error by $k=4$, far exceeding the theoretical guarantee of $4^{-k}$.
+
+\newpage
+
+% ===================================================================
+% ALGORITHM 4: KARGER'S MIN CUT
+% ===================================================================
+\chapter{An Analysis of Karger's Randomized Minimum Cut Algorithm}
+
+\section{Abstract}
+This project implements and analyzes Karger's randomized algorithm for the minimum cut problem. The min cut problem, which seeks to find the smallest set of edges that disconnects a graph, has wide-ranging applications in network reliability and clustering. Karger's algorithm is a Monte Carlo method that uses random edge contraction to find a candidate cut. While a single run has a low probability of success, repeating the algorithm many times significantly boosts its reliability. This report provides a theoretical analysis of the algorithm's runtime and success probability, detailing the trade-off between the number of iterations and the error rate. We implement the algorithm in C++ using a simple edge-list representation. Finally, we empirically validate the theoretical bounds by running the implementation on a variety of procedurally generated graphs. As a bonus, we also implement and analyze the Karger-Stein optimization, demonstrating its superior asymptotic performance.
+
+\section{Introduction}
+
+\subsection{The Minimum Cut Problem}
+The minimum cut (or "min cut") problem is a fundamental challenge in graph theory. Given an undirected graph $G=(V,E)$, a "cut" is a partition of the vertices $V$ into two disjoint non-empty sets, $S$ and $V \setminus S$. The "size" of a cut is the number of edges that cross this partition. The minimum cut problem asks for the cut with the minimum possible size.
+
+\subsection{Real-World Relevance}
+The min cut problem models critical processes in various domains:
+\begin{itemize}
+    \item \textbf{Network Reliability:} In a communication network, the min cut represents the smallest number of link failures that can disconnect the network.
+    \item \textbf{Image Segmentation:} Graphs can represent an image where pixels are nodes; a min cut can separate a foreground object from the background.
+    \item \textbf{Clustering:} The min cut identifies weak connections between groups, useful for detecting clusters in data.
+\end{itemize}
+
+\subsection{Project Objectives}
+The objective is to implement Karger's randomized algorithm from scratch, analyze its theoretical complexity, and empirically validate its performance. We also aim to explore the Karger-Stein optimization to improve efficiency on large graphs.
+
+\section{Algorithm Description}
+
+\subsection{Theoretical Explanation}
+Karger's algorithm relies on the operation of edge contraction. The algorithm proceeds as follows:
+\begin{enumerate}
+    \item \textbf{Start:} Begin with graph $G$ with $n$ vertices.
+    \item \textbf{Loop:} While $|V| > 2$:
+    \begin{itemize}
+        \item Select an edge $(u,v) \in E$ uniformly at random.
+        \item Contract $u$ and $v$ into a single supernode.
+        \item Remove self-loops; preserve parallel edges.
+    \end{itemize}
+    \item \textbf{Stop:} Return the set of edges connecting the two final supernodes.
+\end{enumerate}
+
+\subsection{Mathematical Proof of Success Probability}
+Let $k$ be the size of the minimum cut in $G$. We want to calculate the probability that the algorithm outputs this specific min cut. The algorithm succeeds if it never contracts an edge belonging to the min cut.
+
+\textbf{Step 1: Probability of avoiding the min cut in the first contraction.}
+Since the min cut has size $k$, the degree of every vertex must be at least $k$. By the Handshaking Lemma, the total number of edges $m$ satisfies $2m = \sum \deg(v) \ge nk$, so $m \ge \frac{nk}{2}$. The probability of picking a min cut edge in the first step is:
+\[ P(fail_1) = \frac{k}{m} \le \frac{k}{nk/2} = \frac{2}{n} \]
+Thus, the probability of success is:
+\[ P(success_1) \ge 1 - \frac{2}{n} \]
+
+\textbf{Step 2: Probability of success over all contractions.}
+After $i$ contractions, we have $n-i$ vertices remaining. We still have not contracted a min cut edge, so the min cut size is still $k$. The number of edges remaining is at least $\frac{(n-i)k}{2}$. The probability of success at step $i+1$ is:
+\[ P(success_{i+1}|success_{1...i}) \ge 1 - \frac{k}{(n-i)k/2} = 1 - \frac{2}{n-i} \]
+The algorithm runs for $n-2$ steps. The total probability of success is the product:
+\[ P(success) \ge (1 - \frac{2}{n})(1 - \frac{2}{n-1}) \cdots (1 - \frac{2}{3}) \]
+\[ P(success) \ge \left(\frac{n-2}{n}\right)\left(\frac{n-3}{n-1}\right) \cdots \left(\frac{1}{3}\right) = \frac{2}{n(n-1)} = \binom{n}{2}^{-1} \]
+This proves that a single run succeeds with probability $\Omega(1/n^2)$.
+
+\subsection{Asymptotic Analysis}
+\begin{itemize}
+    \item \textbf{Time Complexity (Single Run):} Using an edge-list, contraction takes $O(m)$ or $O(n^2)$. Total for one run is $O(n^3)$.
+    \item \textbf{Total Time (High Probability):} To reduce the error rate to a small constant, we run the algorithm $T=O(n^2)$ times. Total time is $O(n^5)$.
+\end{itemize}
+
+\section{Implementation Details}
+\subsection{Data Structures Used}
+We utilized a simple \texttt{struct Graph} containing an integer \texttt{V} and a \texttt{std::vector<Edge>} list. This prioritizes simplicity and ease of "from scratch" implementation. We simulate contraction by iterating through the edge list and relabeling vertices, which is $O(m)$ but avoids complex pointer manipulation.
+
+\subsection{Implementation Challenges}
+The primary challenge was handling self-loops efficiently during contraction to prevent wasted iterations. We implemented a check within the random selection loop to discard self-loops immediately.
+
+\section{Experimental Setup}
+\begin{itemize}
+    \item \textbf{Environment:} MAC M3 PRO 11-core CPU, 16GB RAM.
+    \item \textbf{Datasets:} We procedurally generated graphs including Cycle Graphs (easy, min cut 2) and Dense "Needle in a Haystack" graphs (hard, min cut 2 hidden in a dense mesh).
+\end{itemize}
+
+\section{Results \& Analysis}
+
+\subsection{Results}
+We measured the success rate of finding the true min cut over 400 trials for varying iterations $T$.
+
+\begin{figure}[H]
+    \centering
+    % Ensure files exist
+    \includegraphics[width=0.85\textwidth]{karger_success_10.png}
+    \caption{Success Rate vs. Iterations (T) on n10.txt}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{karger_success_20.png}
+    \caption{Success Rate vs. Iterations (T) on n20.txt}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{karger_success_30.png}
+    \caption{Success Rate vs. Iterations (T) on n30.txt}
+\end{figure}
+
+\subsection{Comparative Analysis of Graph Size vs. Reliability}
+A comparative analysis of the success rates for graph sizes $n=10$, $n=20$, and $n=30$ reveals two critical insights regarding the algorithm's scalability.
+
+\subsubsection{Inverse Relationship at Low Iterations}
+The most distinct difference between the datasets is observable at $T=1$ (a single Monte Carlo iteration). As the graph size $n$ increases, the single-run success rate monotonically decreases:
+\begin{itemize}
+    \item For $n=10$, the single-run success rate was approximately 0.72.
+    \item For $n=20$, this dropped to approximately 0.62.
+    \item For $n=30$, it further declined to 0.56.
+\end{itemize}
+This trend empirically validates the theoretical lower bound for a single run, $\Omega(n^{-2})$. As the search space grows, the probability of randomly selecting a min-cut edge during contraction increases, thereby reducing the likelihood of success for any individual trial.
+
+\subsubsection{Convergence Uniformity}
+Despite the initial disparity in difficulty, all three datasets converged to a 100\% success rate at approximately the same threshold ($T \approx 20$). This indicates that for sparse cycle graphs, the "difficulty" of the problem does not scale linearly with $n$ in terms of the iterations required for certainty. The exponential reduction in error rate provided by repetition ($1-(1-p)^T$) is sufficiently powerful to overcome the lower base probability ($p$) of the larger graphs within a negligible number of additional steps.
+
+\subsection{Runtime Analysis}
+We measured the wall-clock execution time of the algorithm as a function of the graph size $n$. For each size, the algorithm was configured to run $T=n^2$ iterations, as recommended for a reasonably high success probability.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{karger_runtime.png}
+    \caption{Average runtime (in milliseconds) of Karger's algorithm versus the number of vertices $n$.}
+\end{figure}
+
+\subsubsection{Discussion of Runtime Results}
+As illustrated in the runtime graph, the runtime exhibits a clear non-linear, polynomial growth trend.
+\begin{itemize}
+    \item \textbf{Polynomial Scaling:} The curve curves upwards, confirming that the time complexity is polynomial rather than linear. This is consistent with our theoretical analysis. Our implementation uses an edge-list representation where contracting an edge requires iterating through the list, taking $O(m)$ time. A single run performs $n-2$ contractions, taking $O(n \cdot m)$. With $T=n^2$ iterations, the total theoretical complexity for sparse graphs is roughly $O(n^4)$.
+    \item \textbf{Observations at Scale:} 
+    \begin{itemize}
+        \item At $n=10$, the runtime is negligible ($\approx 5$ ms).
+        \item At $n=50$, the runtime increases to $\approx 260$ ms.
+    \end{itemize}
+    While the theoretical bound suggests a steep $O(n^4)$ increase, the observed growth is slightly gentler (approximately $O(n^{2.5})$ in this specific range). This discrepancy is likely due to the small input sizes ($N \le 50$), where constant factors and compiler optimizations (like vector handling) have a significant impact before the asymptotic behavior fully dominates.
+    \item \textbf{Practical Implications:} Despite the polynomial growth, the algorithm remains computationally feasible for small to medium graphs ($n \le 50$) on standard consumer hardware, taking only fractions of a second. However, the trend indicates that for significantly larger graphs (e.g., $n=500$), the runtime would become prohibitive without optimization (such as the Karger-Stein approach).
+\end{itemize}
+
+\section{Conclusion}
+We successfully implemented and analyzed Karger's algorithm. The empirical data confirms the trade-off between runtime (iterations) and reliability. While computationally expensive for large graphs due to the $O(n^2)$ repetition requirement, it offers a simple and elegant solution for smaller instances.
+
+\section{Bonus Disclosure: Implementation and Analysis of the Karger-Stein Algorithm}
+As a bonus component for this project, I implemented the Karger-Stein (Recursive Contraction) Algorithm, a significant optimization of the basic Karger algorithm. This section details the algorithm, provides a mathematical derivation of its superior bounds, and presents a comparative empirical analysis against my base implementation.
+
+\subsection{Algorithm Description}
+The Karger-Stein algorithm improves upon the basic approach by addressing its primary inefficiency: the high probability of contracting a min-cut edge during the final stages of the algorithm (when $n$ is small), compared to the low probability during the early stages.
+Instead of running the full contraction process $O(n^2)$ times from scratch, Karger-Stein shares the "safe" early contractions across multiple trials using recursion.
+\begin{enumerate}
+    \item \textbf{Step 1:} Contract the graph $G$ down to $t = \lceil 1 + \frac{n}{\sqrt{2}} \rceil$ vertices.
+    \item \textbf{Step 2:} Create two independent copies of this partially contracted graph.
+    \item \textbf{Step 3:} Recursively compute the min cut on both copies.
+    \item \textbf{Step 4:} Return the minimum of the two results.
+\end{enumerate}
+This branching strategy focuses computational effort on the "dangerous" later stages of contraction.
+
+\subsection{Theoretical Analysis}
+\subsubsection{Success Probability}
+Let $P(n)$ be the probability that the algorithm finds a specific minimum cut in a graph of size $n$. The probability that the min cut survives the contraction to $n/\sqrt{2}$ vertices in Step 1 is roughly $1/2$. The recurrence relation for the success probability is:
+\[ P(n) = 1 - \left(1 - \frac{1}{2}P\left(\frac{n}{\sqrt{2}}\right)\right)^2 \]
+Solving this recurrence yields:
+\[ P(n) = \Omega\left(\frac{1}{\log n}\right) \]
+This is exponentially better than the $\Omega(1/n^2)$ probability of the Basic Karger algorithm. Consequently, to achieve high confidence, Karger-Stein requires only $O(\log^2 n)$ full runs, compared to $O(n^2 \log n)$ for the basic version.
+
+\subsubsection{Time Complexity}
+The runtime $T(n)$ satisfies the recurrence:
+\[ T(n) = 2T\left(\frac{n}{\sqrt{2}}\right) + O(n^2) \]
+where $O(n^2)$ is the cost of the contraction in Step 1. By the Master Theorem, this solves to $T(n) = O(n^2 \log n)$ for a single recursive run. The total time for a reliable solution (repeating $O(\log^2 n)$ times) is:
+\[ \text{Total Time} = O(n^2 \log^3 n) \]
+This is significantly faster than the $O(n^4 \log n)$ required for the reliable Basic Karger algorithm.
+
+\subsection{Empirical Comparison Results}
+We compared both algorithms on the "Needle in a Haystack" dataset ($n=50$), a dense graph constructed to maximize the probability of error for the Basic algorithm.
+
+\subsubsection{Success Rate Comparison}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.45\textwidth]{karger_success.png}
+    \includegraphics[width=0.45\textwidth]{karger_stein.png}
+    \caption{Left: Basic Karger Success Rate. Right: Karger-Stein Success Rate (n=50).}
+\end{figure}
+The difference in reliability is evident. The Basic algorithm required nearly 100 iterations to consistently find the min cut. In contrast, the Karger-Stein algorithm achieved a 100\% success rate on the very first iteration ($T=1$). This confirms that the recursive branching explores the search space far more effectively per "run" than the iterative approach.
+
+\subsubsection{Runtime Comparison \& Overhead Analysis}
+We also compared the wall-clock time for both algorithms on graphs of size $n=10$ to 50.
+
+\textbf{Critical Observation:} While Karger-Stein is theoretically superior, our empirical results for $n=50$ showed that Karger-Stein ($\approx 375$ ms) was actually slightly slower than Basic Karger ($\approx 260$ ms).
+This counter-intuitive result is due to constant-factor overhead.
+\begin{itemize}
+    \item \textbf{Basic Karger:} Extremely lightweight. Contraction is a simple loop over an edge list.
+    \item \textbf{Karger-Stein:} Heavy. Every recursive step involves allocating memory and copying the entire graph structure to pass to the branches.
+\end{itemize}
+For small graphs ($n \le 50$), the CPU cost of these memory operations outweighs the algorithmic gain. Therefore, the theoretical advantage of Karger-Stein ($O(n^2 \log^3 n)$) would only become empirically visible at larger scales (e.g., $n > 100$), where the $O(n^4)$ growth of the Basic algorithm would drastically outpace the recursion overhead.
+
+\newpage
+
+% ===================================================================
+% ALGORITHM 5: RIC CONVEX HULL
+% ===================================================================
+\chapter{Analysis of Randomized Incremental Construction for Convex Hulls}
+
+\section{Abstract}
+This report investigates the efficiency and behavior of randomized algorithms in computational geometry, specifically focusing on the Randomized Incremental Construction (RIC) for Convex Hulls. We contrast this randomized approach with the deterministic Graham Scan algorithm to evaluate the practical implications of randomization. While Graham Scan offers a guaranteed $O(N \log N)$ time complexity, RIC leverages random input permutation to achieve a similar expected time complexity of $O(N \log N)$. Our empirical analysis demonstrates that while RIC performs exceptionally well on uniform random distributions, often surpassing the deterministic baseline, it remains vulnerable to specific worst-case structures when implemented without auxiliary conflict graphs, degrading to $O(N^2)$.
+
+\section{Introduction}
+Randomized algorithms often provide simpler and more efficient solutions to geometric problems compared to their deterministic counterparts by avoiding worst-case input configurations through random permutations. This project implements and analyzes the Randomized Incremental Construction (RIC) algorithm for the 2D Convex Hull problem. The Convex Hull of a set of points is the smallest convex polygon enclosing the set.
+
+The primary objective is to study the performance characteristics of the RIC algorithm. By comparing it against the standard deterministic Graham Scan algorithm, we aim to highlight the trade-offs between theoretical worst-case guarantees and expected behavior on average inputs.
+
+\section{Algorithm Analysis}
+The Randomized Incremental Construction builds the hull by adding points one by one in a random order. The algorithm begins with a simple triangle formed by the first three points. For each subsequent point, the algorithm checks if it lies inside the current hull. If the point is external, the algorithm updates the hull by identifying and removing the edges visible from the new point and connecting the new point to the remaining chain via two tangent segments.
+
+The efficiency of RIC relies on the random order of insertion. Backward analysis shows that the probability of a random point causing a structural change to the hull decreases as the hull grows. Consequently, the expected time complexity is $O(N \log N)$. However, a naive implementation that searches the entire current hull for tangents at each step can degrade to $O(N^2)$ if the hull size grows linearly, such as when points lie on a circle.
+
+In contrast, the Graham Scan algorithm is a deterministic method that sorts all points based on their polar angle relative to a pivot. It then iterates through the sorted list, maintaining a convex chain on a stack. The sorting step dominates the runtime, resulting in a consistent $O(N \log N)$ time complexity regardless of the input distribution.
+
+\section{Implementation and Methodology}
+The algorithms were implemented in C++ to maximize computational efficiency, utilizing double-precision arithmetic for coordinate representation. A key challenge in geometric algorithms is handling floating-point precision; we addressed this by employing an epsilon threshold for all geometric predicates.
+
+For the RIC implementation, a doubly linked list was chosen to represent the hull vertices. This structure supports $O(1)$ insertion and deletion operations, which are frequent during the update phase. The implementation performs a linear traversal of the hull to determine point visibility. While this simplifies the data structure requirements, it introduces a dependency on the instantaneous size of the hull. The Graham Scan implementation utilizes a standard vector and the standard library sorting algorithm to order points angularly, followed by a linear scan using a stack-based approach.
+
+The experimental evaluation was conducted on a Linux environment using the GCC compiler with optimization level 3. We evaluated performance on two distinct datasets: uniformly distributed points in a square, representing the average case, and points arranged on a circle, representing the worst-case scenario for RIC where every point belongs to the hull.
+
+\section{Results and Discussion}
+The empirical results reveal a stark contrast between the two algorithms depending on the input distribution. On uniformly distributed data, while both algorithms were demonstrably close to linear (theoretically log-linear, but the test sizes don't make it very visible), the RIC implementation demonstrated superior performance, executing in under 0.002 seconds for large inputs. This efficiency arises because the convex hull of uniform random points has a small expected size (logarithmic relative to $N$), making the linear visibility check negligible. The Graham Scan, while fast, incurs a fixed cost due to sorting, consistently taking approximately 0.003 seconds for similar input sizes.
+
+However, the limitations of the naive RIC implementation became evident with the circular dataset. Since every point on a circle belongs to the convex hull, the hull size grows linearly with the number of inserted points. Consequently, the linear visibility check forces the algorithm into a quadratic runtime behavior, taking nearly 1.4 seconds for the largest inputs. In comparison, the Graham Scan maintained its stability, processing the worst-case input in approximately 0.004 seconds, consistent with its $O(N \log N)$ guarantee.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{ric_results.png}
+    \caption{Runtime comparison: RIC vs Graham Scan on Uniform and Circular distributions.}
+    \label{fig:ric_res}
+\end{figure}
+
+\section{Conclusion}
+The study confirms that randomized algorithms like RIC can offer excellent performance for typical inputs, often outperforming deterministic methods due to smaller constant factors and the low probability of expensive structural updates. However, the reliance on randomness does not eliminate the possibility of worst-case behavior if the underlying implementation does not account for specific degenerate cases (e.g., via conflict graphs). For general-purpose applications where input distribution is unpredictable, deterministic algorithms like Graham Scan provide a safer, more consistent performance guarantee.
+
+\newpage
+
+% -------------------------------------------------------------------
+% OVERALL CONCLUSION
+% -------------------------------------------------------------------
+\chapter{Overall Conclusion}
+
+This comparative analysis demonstrates that while randomized algorithms inherently compromise on absolute certainty—either by gambling with time (Las Vegas) or accuracy (Monte Carlo)—they often provide solutions that are far more practical than their deterministic counterparts.
+
+\section*{1. Simplicity vs. Complexity}
+Algorithms like Randomized QuickSort and Karger’s Min Cut are conceptually simpler and easier to implement than their deterministic rivals (e.g., Median-of-Medians pivot selection or max-flow based min-cut algorithms). This simplicity translates to fewer lines of code and lower constant overhead, leading to faster execution in practice.
+
+\section*{2. Avoiding Worst Cases}
+As seen with QuickSort and RIC, deterministic algorithms often have specific "Achilles' heels" (sorted arrays, circular point sets). Randomization effectively destroys these structures. By randomly permuting the input, we transform "worst-case inputs" into "worst-case random events," the probability of which becomes astronomically low.
+
+\section*{3. Scalability in the Real World}
+In domains like cryptography, deterministic solutions are often theoretically possible but practically useless. As shown in our Miller-Rabin analysis, deterministic Trial Division hit a wall at 48 bits, while the randomized approach scaled effortlessly to 64 bits and beyond. Here, the trade-off of a $4^{-k}$ error rate is statistically negligible compared to the benefit of actually being able to compute the result.
+
+\section*{Final Thought}
+Ultimately, this project highlights that "correctness" and "speed" are not binary absolutes. In modern computing, a solution that is correct with probability $1 - 10^{-20}$ and runs in milliseconds is often infinitely more valuable than a solution that is guaranteed correct but requires the lifespan of the universe to compute. Randomization is the tool that allows us to bridge this gap.
+
+\end{document}
