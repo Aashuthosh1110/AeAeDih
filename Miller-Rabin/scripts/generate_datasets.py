@@ -23,14 +23,14 @@ def generate_carmichael_dataset():
         6601      # 7 × 23 × 41
     ]
     
-    with open('dataset_carmichael.csv', 'w', newline='') as f:
+    with open('data/dataset_carmichael.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Number', 'Type'])
         
         for num in carmichael_numbers:
             writer.writerow([num, 'Carmichael'])
     
-    print(f"✓ Generated dataset_carmichael.csv ({len(carmichael_numbers)} Carmichael numbers)")
+    print(f"✓ Generated data/dataset_carmichael.csv ({len(carmichael_numbers)} Carmichael numbers)")
 
 
 def generate_naive_dataset():
@@ -57,12 +57,12 @@ def generate_naive_dataset():
             else:
                 break
     
-    with open('dataset_naive.csv', 'w', newline='') as f:
+    with open('data/dataset_naive.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Number', 'BitLength'])
         writer.writerows(data)
     
-    print(f"✓ Generated dataset_naive.csv ({len(data)} entries)")
+    print(f"✓ Generated data/dataset_naive.csv ({len(data)} entries)")
 
 
 def generate_mr_dataset():
@@ -89,12 +89,12 @@ def generate_mr_dataset():
             else:
                 break
     
-    with open('dataset_mr.csv', 'w', newline='') as f:
+    with open('data/dataset_mr.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Number', 'BitLength'])
         writer.writerows(data)
     
-    print(f"✓ Generated dataset_mr.csv ({len(data)} entries)")
+    print(f"✓ Generated data/dataset_mr.csv ({len(data)} entries)")
 
 
 def generate_k_scaling_dataset():
@@ -110,12 +110,12 @@ def generate_k_scaling_dataset():
     for k in range(1, 51):
         data.append([large_prime, k])
     
-    with open('dataset_k_scaling.csv', 'w', newline='') as f:
+    with open('data/dataset_k_scaling.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         writer.writerow(['Number', 'k_value'])
         writer.writerows(data)
     
-    print(f"✓ Generated dataset_k_scaling.csv (Prime: {large_prime}, k=1..50)")
+    print(f"✓ Generated data/dataset_k_scaling.csv (Prime: {large_prime}, k=1..50)")
 
 
 if __name__ == '__main__':

@@ -21,9 +21,9 @@ def plot_error_rate():
     Shows empirical false positive rate vs. k with theoretical 4^-k overlay.
     """
     try:
-        df = pd.read_csv('results_error_test.csv')
+        df = pd.read_csv('results/results_error_test.csv')
     except FileNotFoundError:
-        print("⚠ results_error_test.csv not found. Skipping error rate plot.")
+        print("⚠ results/results_error_test.csv not found. Skipping error rate plot.")
         return
     
     # Get unique Carmichael numbers
@@ -63,8 +63,8 @@ def plot_error_rate():
     plt.grid(True, which="both", ls="--", alpha=0.5)
     plt.xticks(k_values)
     plt.tight_layout()
-    plt.savefig('plot_error_rate.png', dpi=300, bbox_inches='tight')
-    print("✓ Saved plot_error_rate.png")
+    plt.savefig('plots/plot_error_rate.png', dpi=300, bbox_inches='tight')
+    print("✓ Saved plots/plot_error_rate.png")
     plt.close()
 
 
@@ -74,8 +74,8 @@ def plot_naive_vs_mr():
     Shows the exponential "wall" hit by Trial Division vs. MR's flat performance.
     """
     try:
-        df_naive = pd.read_csv('results_bench_naive.csv')
-        df_mr = pd.read_csv('results_bench_mr.csv')
+        df_naive = pd.read_csv('results/results_bench_naive.csv')
+        df_mr = pd.read_csv('results/results_bench_mr.csv')
     except FileNotFoundError as e:
         print(f"⚠ Missing file: {e}. Skipping naive vs. MR plot.")
         return
@@ -118,8 +118,8 @@ def plot_naive_vs_mr():
     plt.legend(fontsize=12, loc='upper left')
     plt.grid(True, which="both", ls="--", alpha=0.6)
     plt.tight_layout()
-    plt.savefig('plot_naive_vs_mr.png', dpi=300, bbox_inches='tight')
-    print("✓ Saved plot_naive_vs_mr.png")
+    plt.savefig('plots/plot_naive_vs_mr.png', dpi=300, bbox_inches='tight')
+    print("✓ Saved plots/plot_naive_vs_mr.png")
     plt.close()
 
 
@@ -129,9 +129,9 @@ def plot_k_scaling():
     Shows linear relationship between k and execution time.
     """
     try:
-        df = pd.read_csv('results_k_test.csv')
+        df = pd.read_csv('results/results_k_test.csv')
     except FileNotFoundError:
-        print("⚠ results_k_test.csv not found. Skipping k-scaling plot.")
+        print("⚠ results/results_k_test.csv not found. Skipping k-scaling plot.")
         return
     
     # Group by k (should be one entry per k, but average just in case)
@@ -159,8 +159,8 @@ def plot_k_scaling():
     plt.legend(fontsize=12, loc='upper left')
     plt.grid(True, which="both", ls="--", alpha=0.6)
     plt.tight_layout()
-    plt.savefig('plot_k_scaling.png', dpi=300, bbox_inches='tight')
-    print("✓ Saved plot_k_scaling.png")
+    plt.savefig('plots/plot_k_scaling.png', dpi=300, bbox_inches='tight')
+    print("✓ Saved plots/plot_k_scaling.png")
     plt.close()
 
 
@@ -168,10 +168,10 @@ if __name__ == '__main__':
     """
     Main entry point.
     Expects CSV files from the C++ batch program:
-    - results_error_test.csv
-    - results_bench_naive.csv
-    - results_bench_mr.csv
-    - results_k_test.csv
+    - results/results_error_test.csv
+    - results/results_bench_naive.csv
+    - results/results_bench_mr.csv
+    - results/results_k_test.csv
     """
     print("Generating plots from benchmark results...\n")
     plot_error_rate()

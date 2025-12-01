@@ -1,361 +1,329 @@
-Theoretical Analysis: Miller-Rabin Primality Test
+# Miller-Rabin Primality Test
 
-The Miller-Rabin Primality Test is a highly efficient, randomized Monte Carlo algorithm used to determine if a large integer $n$ is composite or "probably prime." It improves upon Fermat's Little Theorem by incorporating a check for Non-Trivial Square Roots of Unity modulo $n$.
+**Author:** Aashuthosh S Sharma  
+**Date:** December 2, 2025  
+**Course:** Algorithm Analysis & Design
 
-## 1. Proof of Correctness (Strong Witness Theorem)
+---
 
-The Miller-Rabin test relies on the following theorem, which states that any composite number $n$ will fail the test for at least 75% of randomly chosen bases (witnesses).
+## Abstract
 
-### A. The Setup
+This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The Miller-Rabin algorithm achieves O(k log³ n) time complexity where k is the number of iterations, making it vastly superior to Trial Division's O(√n) for large integers. Our implementation handles the full 64-bit unsigned integer range with overflow protection via 128-bit intermediate calculations and employs MT19937-64 for high-quality random witness selection. Experimental results demonstrate Miller-Rabin maintains microsecond-level execution times across 20-64 bit inputs while Trial Division exhibits exponential slowdown beyond 48 bits. Error rate analysis on five Carmichael numbers (561, 1105, 1729, 2465, 6601) shows empirical false positive rates well below the theoretical 4⁻ᵏ bound, with all achieving 0% error by k=4. An automated benchmarking pipeline validates theoretical complexity claims and demonstrates practical effectiveness for cryptographic applications.
 
-Let $n$ be an odd integer we want to test for primality. We can express $n-1$ in the form:
+---
 
-$$
-n-1 = 2^r \cdot d
-$$
+## 1. Introduction
 
-where $d$ is an odd integer and $r \ge 1$. This decomposition is the first step in the algorithm (in `miller_rabin.cpp`).
+### 1.1 Problem Definition
 
-### B. The Miller-Rabin Conditions
+Primality testing determines whether a given integer n is prime or composite—a fundamental problem in number theory with critical applications in modern cryptography. RSA encryption, digital signatures, and key generation require efficient methods to test large prime numbers, often with hundreds of digits. Traditional deterministic methods like Trial Division become computationally prohibitive for cryptographic-scale integers, necessitating efficient probabilistic approaches.
 
-For a given base $a$ (where $1 < a < n-1$), $n$ is considered **probably prime** (i.e., $a$ is a *strong liar*) if $a$ satisfies *one* of the two following conditions:
+### 1.2 Real-World Relevance
 
-1.  **Fermat Condition (Base Case):** The base raised to the odd power $d$ is congruent to $1 \pmod n$.
+The Miller-Rabin primality test is the industry standard for cryptographic primality testing:
 
-$$
-a^d \equiv 1 \pmod n
-$$
+- **RSA Key Generation**: 1024/2048-bit RSA keys require testing hundreds of candidate primes
+- **Cryptocurrency**: Blockchain systems use prime-based cryptographic primitives  
+- **Digital Signatures**: DSA and ECDSA rely on prime number generation
+- **Secure Communications**: TLS/SSL certificate generation requires efficient primality verification
 
-2.  **Square Root Condition:** Squaring the base $a^d$ results in $-1 \pmod n$ at some point before the exponent reaches $n-1$.
+The ability to test primality in polylogarithmic time rather than exponential time enables modern public-key cryptography.
 
-$$
-a^{2^j d} \equiv -1 \pmod n \quad \text{for some } 0 \le j < r
-$$
+### 1.3 Project Objectives
 
-**Note:** $-1 \equiv n-1 \pmod n$.
+1. Implement Miller-Rabin primality test from scratch without external algorithmic libraries
+2. Validate theoretical O(k log³ n) complexity through empirical benchmarking
+3. Analyze error characteristics via Carmichael number testing
+4. Compare performance against deterministic Trial Division baseline
+5. Provide reproducible infrastructure with automated benchmarking pipeline
 
-If the number fails both conditions, $a$ is a strong witness, and $n$ is definitively composite.
+---
 
-### C. The Error Bound (The Proof)
+## 2. Algorithm Description
 
-The full proof is complex (relying on group theory and properties of the rings $\mathbb{Z}_n$), but the conclusive theorem is what determines the algorithm's reliability:
+### 2.1 Miller-Rabin Primality Test
 
-**Theorem (Rabin, 1980):** Let $n$ be an odd composite integer. The number of bases $a$ (where $1 < a < n$) that are strong liars (i.e., bases for which the test fails to prove $n$ is composite) is at most $\frac{n-1}{4}$.
+#### Theoretical Foundation
 
-**Conclusion:**
+The Miller-Rabin test is a randomized Monte Carlo algorithm determining whether an integer n is composite or "probably prime." It improves upon Fermat's test by checking for non-trivial square roots of unity modulo n, detecting Carmichael numbers that fool simpler tests.
 
-If $n$ is a composite number, the probability that a single, randomly chosen base $a$ makes the algorithm return the incorrect answer ("Probably Prime") is:
+**Mathematical Setup:**  
+For odd integer n, express n-1 as:
 
-$$
-P(\text{Error in one round}) \le \frac{\text{Number of Strong Liars}}{n-1} \le \frac{(n-1)/4}{n-1} = \frac{1}{4}
-$$
+$$n-1 = 2^r \cdot d$$
 
-By running the test $k$ independent times with $k$ different random bases, the error probability is compounded:
+where d is odd and r ≥ 1.
 
-$$
-P(\text{Error in } k \text{ rounds}) \le \left(\frac{1}{4}\right)^k = 4^{-k} = 2^{-2k}
-$$
+**Miller-Rabin Conditions:**  
+For random base a (1 < a < n-1), n is "probably prime" if either:
 
-This justifies the use of iterations $k$ to achieve cryptographically secure confidence levels.
+1. **Fermat Condition:** $a^d \equiv 1 \pmod{n}$
+2. **Square Root Condition:** $a^{2^j d} \equiv -1 \pmod{n}$ for some $0 \le j < r$
 
------
+Otherwise, a is a "strong witness" and n is definitively composite.
 
-## 2. Time Complexity Analysis
+**Correctness (Rabin, 1980):**  
+For composite n, at most (n-1)/4 bases are "strong liars." Error probability for single test:
 
-The Miller-Rabin algorithm is exceptionally fast—it is **polylogarithmic** in the size of the input $n$, which is a major speedup over deterministic methods like Trial Division ($O(\sqrt{n})$).
+$$P(\text{Error}) \le \frac{1}{4}$$
 
-We define the size of the input $n$ in terms of its number of bits, $L$:
+For k independent iterations:
 
-$$
-L = \log_2 n
-$$
+$$P(\text{Error in k rounds}) \le 4^{-k}$$
 
-The total complexity $T(n)$ is determined by the number of iterations $k$ multiplied by the complexity of a single round:
+#### Time Complexity
 
-$$
-T(n) = k \cdot O(\text{Complexity of a Single Round})
-$$
+Input size: L = log₂ n bits
 
-### A. Complexity of Modular Exponentiation
+**Modular Exponentiation Cost:**
+- Multiplying two L-bit numbers: O(L²)  
+- Square-and-Multiply performs O(L) multiplications: O(L³)
 
-The bottleneck of the Miller-Rabin test is the computation of $a^x \pmod n$, which is performed by the `power()` function using the Square-and-Multiply algorithm.
+**Single Round Cost:**
+- Initial exponentiation a^d mod n: O(L³)
+- Squaring loop (≤ r ≤ L iterations): O(L³)
+- Total: O(L³)
 
-**Cost of Modular Multiplication:**
-To compute $(x \cdot y) \pmod n$, we are multiplying two $L$-bit numbers and taking the modulo of the result with an $L$-bit number. Using standard schoolbook multiplication, the cost of multiplying two $L$-bit numbers is $O(L^2)$.
+**Overall Complexity:**
 
-**Cost of Exponentiation (power function):**
-The exponent in the power function (which is either $d$ or $2^j d$) is at most $n-1$, which has $L$ bits. The Square-and-Multiply algorithm performs at most $2L$ modular multiplications (one multiplication for squaring, one potentially for the odd exponent bit).
+$$T(n) = k \cdot O(L^3) = O(k \log^3 n)$$
 
-Therefore, the number of modular multiplication operations is $O(L)$.
+This polylogarithmic complexity enables instant primality testing of large numbers.
 
-**Total Cost of power(base, exp, mod):**
+#### Space Complexity
 
-$$
-O(\text{multiplications}) \times O(\text{cost of one multiplication}) = O(L) \cdot O(L^2) = O(L^3)
-$$
+O(1) auxiliary space—all calculations reuse constant number of 64/128-bit variables.
 
-### B. Complexity of a Single Miller-Rabin Round
-
-The single round (`miller_rabin_single_round`) involves the following steps:
-
-1.  **Initial Exponentiation:** Calculating $a^d \pmod n$. Cost: $O(L^3)$.
-2.  **Squaring Loop:** The while loop squares the result up to $r$ times. Since $r \le L$, this loop runs at most $L$ times. Each iteration involves one modular multiplication. Cost: $O(L \cdot L^2) = O(L^3)$.
-3.  **Random Number Generation:** Generating the random base $a$. Cost: $O(1)$ (or negligible compared to $O(L^3)$).
-
-The total time for one round is dominated by the initial exponentiation and the subsequent squaring, resulting in $O(L^3)$.
-
-### C. Overall Complexity
-
-Since the test runs for $k$ iterations to reduce the probability of error:
-
-$$
-T(n) = k \cdot O(L^3) = O(k \cdot L^3)
-$$
-
-Substituting $L = \log_2 n$:
-
-$$
-T(n) = O(k \cdot \log^3 n)
-$$
-
-This result demonstrates why Miller-Rabin is efficient: increasing the input size $n$ only increases the runtime polynomially in $\log n$, allowing for instant primality testing of numbers with hundreds of bits.
-
------
+---
 
 ## 3. Implementation Details
 
-My implementation in `miller_rabin.cpp` includes several key features to ensure correctness and robustness for a C++ environment:
+### 3.1 Programming Environment
 
-1.  **Modular Exponentiation**: The `power(base, exp, mod)` function, which is the computational core of the test, was implemented from scratch using the efficient **Square-and-Multiply** algorithm. This avoids calculating the massive intermediate value of `base^exp` before applying the modulus.
+- **Language:** C++11
+- **Compiler:** GCC with `-std=c++11 -O3`
+- **Standard Libraries:** `<cstdint>`, `<random>`, `<chrono>`, `<iostream>`
+- **External Libraries:** None for core algorithm (SymPy/matplotlib for benchmarking only)
 
-2.  **64-bit Overflow Prevention**: A critical detail is handling potential overflows. When multiplying two 64-bit numbers, the result can exceed the capacity of a `uint64_t`. To solve this, the intermediate multiplication `(a * b) % n` is performed by casting the operands to `unsigned __int128`, a 128-bit integer type. This ensures the multiplication completes without overflow before the modulo is applied, making the algorithm robust for the full range of 64-bit integers.
+### 3.2 Key Design Choices
 
-3.  **High-Quality Randomness**: For selecting random witnesses, the implementation uses C++'s `std::mt19937_64`, a 64-bit Mersenne Twister engine. This provides a much higher quality of randomness than the standard `rand()`, which is critical for the statistical reliability of the test.
+**Integer Representation:**  
+`uint64_t` (0 to 2⁶⁴-1) balances range, performance, and overflow handling capabilities.
 
------
+**Critical Implementation Features:**
 
-## 4. Results & Empirical Analysis
+1. **Overflow Protection**
+```cpp
+return (uint64_t)(((unsigned __int128)a * b) % mod);
+```
+Uses 128-bit intermediate calculation for `(a * b) % n` when a, b near 2⁶⁴.
 
-The experiments conducted reveal the practical trade-offs between the deterministic Trial Division and the probabilistic Miller-Rabin test.
+2. **High-Quality RNG**
+```cpp
+std::mt19937_64 rng(std::random_device{}());
+```
+MT19937-64 provides superior statistical properties (2¹⁹⁹³⁷-1 period) vs standard `rand()`.
 
-### A. Runtime Performance: The "Exponential Wall"
+3. **Modular Exponentiation**  
+Square-and-Multiply algorithm: O(log exp) instead of O(exp) naive approach.
 
-The runtime comparison graph focuses exclusively on inputs with **32 bits or more**, deliberately excluding smaller values where execution time is dominated by system overhead rather than algorithmic complexity. This filtering reveals the true computational characteristics of each algorithm.
+4. **Edge Cases**  
+Handles n=2, even numbers, small primes efficiently.
 
-The graph clearly demonstrates what we call the **"Exponential Wall"**: Trial Division's runtime explodes dramatically as input size increases. Specifically:
-- At 32 bits (~4.3 billion): Trial Division completes in ~0.002 seconds
-- At 40 bits (~1 trillion): Trial Division takes ~0.03 seconds  
-- At 48 bits and beyond: Trial Division becomes impractically slow, taking multiple seconds
+### 3.3 Modular Architecture
 
-By the time we reach **64-bit primes** (the largest representable unsigned integers), Trial Division hits the "wall" at approximately **3.35 seconds per test**—a catastrophic slowdown that makes it unusable for real-world cryptographic applications.
+- **`src/miller_rabin.cpp/hpp`**: Core implementation with docstrings
+- **`src/trial_division.cpp/hpp`**: Baseline comparison algorithm  
+- **`src/main.cpp`**: Interactive testing interface
+- **`src/main_batch.cpp`**: Automated batch processing (4 benchmark modes)
+- **`scripts/generate_datasets.py`**: SymPy-verified dataset generation
+- **`scripts/plot_results.py`**: Matplotlib/scipy visualization
+- **`run_pipeline.sh`**: One-command automation
 
-In stark contrast, **Miller-Rabin maintains a virtually flat execution profile** across all bit sizes, hovering around **4 microseconds** regardless of whether the input is 32 or 64 bits. This confirms the theoretical $O(k \log^3 n)$ complexity: doubling the bit length only adds a small polynomial overhead, not an exponential one.
+### 3.4 Implementation Challenges
 
-**Key Insight**: The graph validates that for any input exceeding ~40 bits, Miller-Rabin's polylogarithmic complexity provides orders-of-magnitude performance advantages over Trial Division's $O(\sqrt{n})$ approach.
+**Challenge 1:** 64-bit overflow in modular multiplication  
+**Solution:** `unsigned __int128` casting prevents silent overflow
 
-### B. Error Rate Analysis: Theory Meets Practice
+**Challenge 2:** Statistical independence across k iterations  
+**Solution:** Fresh random witness per iteration via `std::random_device` seeding
 
-The error analysis graph plots the empirical false positive rates of 5 distinct Carmichael numbers (e.g., 561, 1105, 1729) against the theoretical worst-case bound ($4^{-k}$). This comparison highlights the "Strong Liar" phenomenon.
+**Challenge 3:** CSV parsing whitespace handling  
+**Solution:** String trimming before type field processing
 
-**What the Data Shows**:
-- **Theoretical Maximum (Red Line):** The proven bound $4^{-k}$ predicts that error rates will drop exponentially as $k$ increases (e.g., 25% at $k=1$, 6.25% at $k=2$).
-- **Empirical Results (Individual Lines):** The plotted Carmichael numbers show high error rates at $k=1$, confirming they are indeed "Strong Liars" that can trick the test. However, for most of these numbers, the error rate drops to zero much faster than the theoretical bound suggests.
+---
 
-**Why This Matters:**
-While the theoretical bound guarantees a worst-case safety margin, our empirical data shows that for specific composites—even tricky ones like Carmichael numbers—the test often performs significantly better. By $k=5$, the likelihood of a false positive is negligible for all tested numbers.
+## 4. Experimental Setup
 
-**Practical Implication**: Even with modest k values (k=5-10), Miller-Rabin provides reliability far exceeding its theoretical minimum guarantee, making it suitable for security-critical applications.
+### 4.1 Environment
 
-### C. Security vs. Speed Trade-off
+- **Hardware:** AMD Ryzen x86-64, RAM < 100MB usage
+- **OS:** Linux (Ubuntu-based)
+- **Compiler:** GCC C++11
+- **Python:** 3.12 (SymPy 1.x, matplotlib 3.x, pandas 2.x, scipy 1.x)
 
-The parameter sensitivity graph shows that the execution time of the Miller-Rabin test increases linearly with the number of iterations, `k`. Each round adds a constant amount of work. This presents a clear trade-off: increasing `k` enhances security by reducing the error probability, but at the cost of performance. Based on the analysis, a value of **k=40** is a widely accepted industry standard, offering a negligible error probability (less than 1 in $10^{24}$) while maintaining near-instantaneous execution times.
+### 4.2 Datasets
 
------
+All synthetically generated via SymPy for mathematical verification:
 
-## 5. Bonus Disclosure
+**Dataset 1: Carmichael Numbers** (`data/dataset_carmichael.csv`)
+- 5 numbers: 561, 1105, 1729, 2465, 6601
+- Purpose: Error rate analysis on composites that fool Fermat's test
 
-I would like to claim bonus consideration for the following implementation details, which demonstrate a deeper understanding of the algorithm's practical challenges:
+**Dataset 2: Trial Division Primes** (`data/dataset_naive.csv`)
+- 80 primes (20-50 bits, step=2, 5 per bit length)
+- Purpose: Baseline comparison (beyond 50 bits too slow)
 
-1.  **Carmichael Number Resilience**: The empirical analysis explicitly tested against Carmichael numbers (e.g., 1729). These numbers are infamous for defeating the simpler Fermat Primality Test, making them strong pseudoprimes. My Miller-Rabin implementation correctly identifies them as composite, showcasing its superior robustness.
+**Dataset 3: Miller-Rabin Primes** (`data/dataset_mr.csv`)
+- 60 primes (20-64 bits, step=4, 5 per bit length)
+- Purpose: Full 64-bit range polylogarithmic scaling demonstration
 
-2.  **64-bit Robustness with `__int128`**: A common but subtle bug in primality testing implementations is integer overflow during the modular multiplication step (`a * b % n`). When `a` and `b` are large 64-bit numbers, their product exceeds the `uint64_t` limit. My implementation correctly handles this by casting to a 128-bit integer (`unsigned __int128`) for the intermediate calculation, ensuring the logic is sound across the entire 64-bit integer space.Theoretical Analysis: Miller-Rabin Primality Test
+**Dataset 4: K-Scaling** (`data/dataset_k_scaling.csv`)
+- Single 64-bit prime (9223372036978232611) with k=1..50
+- Purpose: Linear scaling validation (100 iterations per k)
 
-The Miller-Rabin Primality Test is a highly efficient, randomized Monte Carlo algorithm used to determine if a large integer $n$ is composite or "probably prime." It improves upon Fermat's Little Theorem by incorporating a check for Non-Trivial Square Roots of Unity modulo $n$.
+### 4.3 Metrics
 
-## 1. Proof of Correctness (Strong Witness Theorem)
+**Primary:**
+- Wall-clock time (`std::chrono::high_resolution_clock`, microseconds)
+- False Positive Rate (FPR): incorrect "prime" classification proportion
+- Bit length (log₂ n)
 
-The Miller-Rabin test relies on the following theorem, which states that any composite number $n$ will fail the test for at least 75% of randomly chosen bases (witnesses).
+**Secondary:**
+- K-value (iterations)
+- Linear regression R² (goodness-of-fit)
 
-### A. The Setup
+---
 
-Let $n$ be an odd integer we want to test for primality. We can express $n-1$ in the form:
+## 5. Results & Analysis
 
-$$
-n-1 = 2^r \cdot d
-$$
+### 5.1 Runtime Performance: The "Exponential Wall"
 
-where $d$ is an odd integer and $r \ge 1$. This decomposition is the first step in the algorithm (in `miller_rabin.cpp`).
+**Setup:**
+- Trial Division: 20-50 bits (80 cases)
+- Miller-Rabin: 20-64 bits, k=5 (60 cases, 1000 iterations/avg)
 
-### B. The Miller-Rabin Conditions
+![Runtime Comparison](plots/plot_naive_vs_mr.png)  
+*Figure 1: Runtime comparison (log-log scale). Trial Division exhibits O(√n) exponential growth; Miller-Rabin maintains flat O(k log³ n) profile.*
 
-For a given base $a$ (where $1 < a < n-1$), $n$ is considered **probably prime** (i.e., $a$ is a *strong liar*) if $a$ satisfies *one* of the two following conditions:
+**Key Findings:**
+- **20-30 bits:** Comparable performance (sub-millisecond)
+- **32-40 bits:** Trial Division slows (~2-30 ms)
+- **48+ bits:** Trial Division "wall" (seconds per test)
+- **64 bits:** Trial Division impractical; Miller-Rabin remains microsecond-level
 
-1.  **Fermat Condition (Base Case):** The base raised to the odd power $d$ is congruent to $1 \pmod n$.
+**Discussion:**  
+Experimental results validate theoretical complexity. Trial Division's O(2^(L/2)) exponential growth vs Miller-Rabin's O(k log³ n) polylogarithmic scaling becomes stark beyond 40 bits. For cryptographic 1024-bit primes, Trial Division is infeasible while Miller-Rabin remains practical.
 
-$$
-a^d \equiv 1 \pmod n
-$$
+### 5.2 Error Rate Analysis: Carmichael Numbers
 
-2.  **Square Root Condition:** Squaring the base $a^d$ results in $-1 \pmod n$ at some point before the exponent reaches $n-1$.
+**Setup:**
+- 5 Carmichael numbers (561=3×11×17, 1105=5×13×17, 1729=7×13×19, 2465=5×17×29, 6601=7×23×41)
+- 10,000 trials per (number, k) for k=1..10
+- FPR = (false positives) / 10,000
 
-$$
-a^{2^j d} \equiv -1 \pmod n \quad \text{for some } 0 \le j < r
-$$
+![Error Rate Analysis](plots/plot_error_rate.png)  
+*Figure 2: Individual Carmichael FPR vs theoretical 4⁻ᵏ bound (log scale). All reach 0% by k=4.*
 
-**Note:** $-1 \equiv n-1 \pmod n$.
+**Key Findings:**
 
-If the number fails both conditions, $a$ is a strong witness, and $n$ is definitively composite.
+| k | Theoretical Bound | Empirical (561) | Empirical (1105) | Empirical (1729) |
+|---|-------------------|-----------------|------------------|------------------|
+| 1 | 25.0%             | ~1.2%           | ~2.5%            | ~1.5%            |
+| 2 | 6.25%             | ~0.1%           | ~0.3%            | ~0.2%            |
+| 3 | 1.56%             | 0%              | 0%               | 0%               |
+| 4 | 0.39%             | 0%              | 0%               | 0%               |
 
-### C. The Error Bound (The Proof)
+**Discussion:**  
+Theoretical 4⁻ᵏ bound is worst-case; actual "strong liar" density varies per composite. Individual Carmichael numbers show different k=1 FPR (561: 1.2%, 1105: 2.5%) reflecting varying strong liar distributions. All converge to 0% by k=4, far exceeding theoretical guarantee. For cryptographic k=10 (theoretical 9.5×10⁻⁷), empirical shows perfect 0% detection.
 
-The full proof is complex (relying on group theory and properties of the rings $\mathbb{Z}_n$), but the conclusive theorem is what determines the algorithm's reliability:
+### 5.3 Linear Scaling with k
 
-**Theorem (Rabin, 1980):** Let $n$ be an odd composite integer. The number of bases $a$ (where $1 < a < n$) that are strong liars (i.e., bases for which the test fails to prove $n$ is composite) is at most $\frac{n-1}{4}$.
+**Setup:**
+- Single 64-bit prime, k=1..50
+- 100 iterations per k, averaged
 
-**Conclusion:**
+![K-Scaling Analysis](plots/plot_k_scaling.png)  
+*Figure 3: Execution time vs k with linear regression (R² > 0.99).*
 
-If $n$ is a composite number, the probability that a single, randomly chosen base $a$ makes the algorithm return the incorrect answer ("Probably Prime") is:
+**Key Findings:**
+- **Linearity:** R² > 0.99 confirms O(k) for fixed n
+- **Slope:** ~4-5 μs per iteration
+- **Trade-off:** Doubling k doubles runtime but quadruples reliability (16× error reduction)
 
-$$
-P(\text{Error in one round}) \le \frac{\text{Number of Strong Liars}}{n-1} \le \frac{(n-1)/4}{n-1} = \frac{1}{4}
-$$
+**Recommended k values:**
+- k=5: ~25 μs, 0.1% error (non-critical applications)
+- k=10: ~50 μs, 10⁻⁵ error (general use)
+- k=20: ~100 μs, 10⁻¹² error (cryptographic grade)
+- k=40: <1 ms, 10⁻²⁴ error (RSA standard)
 
-By running the test $k$ independent times with $k$ different random bases, the error probability is compounded:
+**Discussion:**  
+Perfect linearity validates O(k) scaling for fixed n. Each iteration costs one modular exponentiation + squaring loop (~5 μs). Even k=40 (astronomical confidence) completes sub-millisecond, enabling real-time cryptographic operations.
 
-$$
-P(\text{Error in } k \text{ rounds}) \le \left(\frac{1}{4}\right)^k = 4^{-k} = 2^{-2k}
-$$
+---
 
-This justifies the use of iterations $k$ to achieve cryptographically secure confidence levels.
+## 6. Conclusion
 
------
+### 6.1 Summary
 
-## 2. Time Complexity Analysis
+Successfully implemented and validated Miller-Rabin probabilistic primality test:
 
-The Miller-Rabin algorithm is exceptionally fast—it is **polylogarithmic** in the size of the input $n$, which is a major speedup over deterministic methods like Trial Division ($O(\sqrt{n})$).
+1. **Complexity Validation:** O(k log³ n) confirmed vs O(√n) Trial Division baseline
+2. **Performance:** Microsecond execution across all bit sizes vs exponential Trial Division slowdown
+3. **Reliability:** Empirical FPR exceeds theoretical guarantees (0% by k=4 for all Carmichael numbers)
+4. **Scalability:** Linear O(k) scaling enables flexible security-performance trade-offs
 
-We define the size of the input $n$ in terms of its number of bits, $L$:
+### 6.2 Limitations
 
-$$
-L = \log_2 n
-$$
+1. 64-bit range (cryptographic needs 1024+ bits)
+2. Limited Carmichael sample (5 numbers)
+3. Hardware-specific timing results
+4. No deterministic variant (Miller's test, AKS) comparison
 
-The total complexity $T(n)$ is determined by the number of iterations $k$ multiplied by the complexity of a single round:
+### 6.3 Future Work
 
-$$
-T(n) = k \cdot O(\text{Complexity of a Single Round})
-$$
+1. Arbitrary-precision arithmetic (GMP library)
+2. Deterministic Miller test for ≤ 2⁶⁴ inputs
+3. Multi-threaded k-iteration parallelization
+4. GPU acceleration for batch testing
+5. Broader composite testing (Solovay-Strassen, Baillie-PSW comparison)
 
-### A. Complexity of Modular Exponentiation
+---
 
-The bottleneck of the Miller-Rabin test is the computation of $a^x \pmod n$, which is performed by the `power()` function using the Square-and-Multiply algorithm.
+## 7. Bonus Disclosure
 
-**Cost of Modular Multiplication:**
-To compute $(x \cdot y) \pmod n$, we are multiplying two $L$-bit numbers and taking the modulo of the result with an $L$-bit number. Using standard schoolbook multiplication, the cost of multiplying two $L$-bit numbers is $O(L^2)$.
+I claim bonus consideration for implementations exceeding core requirements:
 
-**Cost of Exponentiation (power function):**
-The exponent in the power function (which is either $d$ or $2^j d$) is at most $n-1$, which has $L$ bits. The Square-and-Multiply algorithm performs at most $2L$ modular multiplications (one multiplication for squaring, one potentially for the odd exponent bit).
+**Bonus 1: 64-bit Overflow Protection (`__int128`)**
+- Subtle critical bug most implementations miss
+- Ensures correctness across entire uint64_t range
+- Demonstrates low-level hardware understanding
 
-Therefore, the number of modular multiplication operations is $O(L)$.
+**Bonus 2: MT19937-64 High-Quality RNG**
+- Superior to standard `rand()` (2¹⁹⁹³⁷-1 period)
+- Critical for probabilistic algorithm reliability
+- Native 64-bit output without bit manipulation
 
-**Total Cost of power(base, exp, mod):**
+**Bonus 3: Automated Reproducible Pipeline**
+- Complete infrastructure: dataset generation, batch processing, visualization
+- Scientific reproducibility via `run_pipeline.sh` one-command automation
+- Professional separation of concerns (generation/computation/visualization)
 
-$$
-O(\text{multiplications}) \times O(\text{cost of one multiplication}) = O(L) \cdot O(L^2) = O(L^3)
-$$
+**Bonus 4: Individual Number Analysis (Non-Averaged)**
+- Tracks each Carmichael number separately vs averaging
+- Reveals strong liar density variations across composites
+- Demonstrates nuanced empirical interpretation
 
-### B. Complexity of a Single Miller-Rabin Round
+---
 
-The single round (`miller_rabin_single_round`) involves the following steps:
+## 8. References
 
-1.  **Initial Exponentiation:** Calculating $a^d \pmod n$. Cost: $O(L^3)$.
-2.  **Squaring Loop:** The while loop squares the result up to $r$ times. Since $r \le L$, this loop runs at most $L$ times. Each iteration involves one modular multiplication. Cost: $O(L \cdot L^2) = O(L^3)$.
-3.  **Random Number Generation:** Generating the random base $a$. Cost: $O(1)$ (or negligible compared to $O(L^3)$).
+1. Rabin, M. O. (1980). "Probabilistic Algorithm for Testing Primality." *Journal of Number Theory*, 12(1), 128-138.
 
-The total time for one round is dominated by the initial exponentiation and the subsequent squaring, resulting in $O(L^3)$.
+2. Miller, G. L. (1976). "Riemann's Hypothesis and Tests for Primality." *Journal of Computer and System Sciences*, 13(3), 300-317.
 
-### C. Overall Complexity
+3. Cormen, T. H., et al. (2009). *Introduction to Algorithms* (3rd ed.). MIT Press. Chapter 31.
 
-Since the test runs for $k$ iterations to reduce the probability of error:
+4. Crandall, R., & Pomerance, C. (2005). *Prime Numbers: A Computational Perspective* (2nd ed.). Springer. Chapter 3.
 
-$$
-T(n) = k \cdot O(L^3) = O(k \cdot L^3)
-$$
-
-Substituting $L = \log_2 n$:
-
-$$
-T(n) = O(k \cdot \log^3 n)
-$$
-
-This result demonstrates why Miller-Rabin is efficient: increasing the input size $n$ only increases the runtime polynomially in $\log n$, allowing for instant primality testing of numbers with hundreds of bits.
-
------
-
-## 3. Implementation Details
-
-My implementation in `miller_rabin.cpp` includes several key features to ensure correctness and robustness for a C++ environment:
-
-1.  **Modular Exponentiation**: The `power(base, exp, mod)` function, which is the computational core of the test, was implemented from scratch using the efficient **Square-and-Multiply** algorithm. This avoids calculating the massive intermediate value of `base^exp` before applying the modulus.
-
-2.  **64-bit Overflow Prevention**: A critical detail is handling potential overflows. When multiplying two 64-bit numbers, the result can exceed the capacity of a `uint64_t`. To solve this, the intermediate multiplication `(a * b) % n` is performed by casting the operands to `unsigned __int128`, a 128-bit integer type. This ensures the multiplication completes without overflow before the modulo is applied, making the algorithm robust for the full range of 64-bit integers.
-
-3.  **High-Quality Randomness**: For selecting random witnesses, the implementation uses C++'s `std::mt19937_64`, a 64-bit Mersenne Twister engine. This provides a much higher quality of randomness than the standard `rand()`, which is critical for the statistical reliability of the test.
-
------
-
-## 4. Results & Empirical Analysis
-
-The experiments conducted reveal the practical trade-offs between the deterministic Trial Division and the probabilistic Miller-Rabin test.
-
-### A. Runtime Performance: The "Exponential Wall"
-
-The runtime comparison graph focuses exclusively on inputs with **32 bits or more**, deliberately excluding smaller values where execution time is dominated by system overhead rather than algorithmic complexity. This filtering reveals the true computational characteristics of each algorithm.
-
-The graph clearly demonstrates what we call the **"Exponential Wall"**: Trial Division's runtime explodes dramatically as input size increases. Specifically:
-- At 32 bits (~4.3 billion): Trial Division completes in ~0.002 seconds
-- At 40 bits (~1 trillion): Trial Division takes ~0.03 seconds  
-- At 48 bits and beyond: Trial Division becomes impractically slow, taking multiple seconds
-
-By the time we reach **64-bit primes** (the largest representable unsigned integers), Trial Division hits the "wall" at approximately **3.35 seconds per test**—a catastrophic slowdown that makes it unusable for real-world cryptographic applications.
-
-In stark contrast, **Miller-Rabin maintains a virtually flat execution profile** across all bit sizes, hovering around **4 microseconds** regardless of whether the input is 32 or 64 bits. This confirms the theoretical $O(k \log^3 n)$ complexity: doubling the bit length only adds a small polynomial overhead, not an exponential one.
-
-**Key Insight**: The graph validates that for any input exceeding ~40 bits, Miller-Rabin's polylogarithmic complexity provides orders-of-magnitude performance advantages over Trial Division's $O(\sqrt{n})$ approach.
-
-### B. Error Rate Analysis: Theory Meets Practice
-
-The error analysis graph plots the empirical false positive rates of 5 distinct Carmichael numbers (e.g., 561, 1105, 1729) against the theoretical worst-case bound ($4^{-k}$). This comparison highlights the "Strong Liar" phenomenon.
-
-**What the Data Shows**:
-- **Theoretical Maximum (Red Line):** The proven bound $4^{-k}$ predicts that error rates will drop exponentially as $k$ increases (e.g., 25% at $k=1$, 6.25% at $k=2$).
-- **Empirical Results (Individual Lines):** The plotted Carmichael numbers show high error rates at $k=1$, confirming they are indeed "Strong Liars" that can trick the test. However, for most of these numbers, the error rate drops to zero much faster than the theoretical bound suggests.
-
-**Why This Matters:**
-While the theoretical bound guarantees a worst-case safety margin, our empirical data shows that for specific composites—even tricky ones like Carmichael numbers—the test often performs significantly better. By $k=5$, the likelihood of a false positive is negligible for all tested numbers.
-
-**Practical Implication**: Even with modest k values (k=5-10), Miller-Rabin provides reliability far exceeding its theoretical minimum guarantee, making it suitable for security-critical applications.
-
-### C. Security vs. Speed Trade-off
-
-The parameter sensitivity graph shows that the execution time of the Miller-Rabin test increases linearly with the number of iterations, `k`. Each round adds a constant amount of work. This presents a clear trade-off: increasing `k` enhances security by reducing the error probability, but at the cost of performance. Based on the analysis, a value of **k=40** is a widely accepted industry standard, offering a negligible error probability (less than 1 in $10^{24}$) while maintaining near-instantaneous execution times.
-
------
-
-## 5. Bonus Disclosure
-
-I would like to claim bonus consideration for the following implementation details, which demonstrate a deeper understanding of the algorithm's practical challenges:
-
-1.  **Carmichael Number Resilience**: The empirical analysis explicitly tested against Carmichael numbers (e.g., 1729). These numbers are infamous for defeating the simpler Fermat Primality Test, making them strong pseudoprimes. My Miller-Rabin implementation correctly identifies them as composite, showcasing its superior robustness.
-
-2.  **64-bit Robustness with `__int128`**: A common but subtle bug in primality testing implementations is integer overflow during the modular multiplication step (`a * b % n`). When `a` and `b` are large 64-bit numbers, their product exceeds the `uint64_t` limit. My implementation correctly handles this by casting to a 128-bit integer (`unsigned __int128`) for the intermediate calculation, ensuring the logic is sound across the entire 64-bit integer space.
+5. Matsumoto, M., & Nishimura, T. (1998). "Mersenne Twister." *ACM TOMACS*, 8(1), 3-30.
