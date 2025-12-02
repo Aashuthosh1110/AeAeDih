@@ -19,7 +19,14 @@
 \usepackage{caption}
 \usepackage{subcaption}
 
-% Configuration
+% IMPORTANT: The [demo] option creates black rectangles instead of images.
+% This allows the file to compile even if you don't have the images yet.
+% *** REMOVE "[demo]" when you have your actual image files in the folder. ***
+\usepackage[demo]{graphicx} 
+
+% ===================================================================
+% CONFIGURATION
+% ===================================================================
 \geometry{left=25mm, right=25mm, top=25mm, bottom=25mm}
 \onehalfspacing
 
@@ -55,16 +62,19 @@
     \vspace{1.5cm}
     {\Large \textbf{Course:} Advanced Algorithm Design}
     
+    \vspace{1cm}
+    \url{https://github.com/Aashuthosh1110/AeAeDih}
+    
     \vspace{2cm}
     
-    \textbf{\Large Team: Aashutosh S. Sharma}
+    \textbf{\Large Team: Aashuthosh S. Sharma}
     
     \vspace{1cm}
     \textit{\large Team Members:} \\
     \vspace{0.5cm}
     1. Shoaib Ahmed \\
     2. Nihar Manoj Gupta \\
-    3. Aashutosh Sharma \\
+    3. Aashuthosh Sharma \\
     4. Ronith Menneni \\
     5. Druhan Shah
     
@@ -113,98 +123,170 @@ As part of this project, we have implemented the selected algorithms from scratc
 \chapter{Analysis of Bogosort}
 
 \section{Introduction}
-\textbf{Bogosort} (also known as Permutation Sort, Stupid Sort, or Monkey Sort) stands as the archetypal example of the "generate and test" paradigm applied to the sorting problem.
 
-While often regarded as a pedagogical joke or a theoretical curiosity, Bogosort provides a critical boundary condition for the study of randomized algorithms. It serves as a \textbf{Las Vegas algorithm} that, while guaranteeing a correct output, possesses a runtime distribution that is theoretically unbounded and practically intractable for all but the smallest inputs.
+\subsection{Problem Definition}
+\textbf{Bogosort} (also known as Permutation Sort, Stupid Sort, or Monkey Sort) stands as the archetypal example of the "generate and test" paradigm applied to the sorting problem. Unlike constructive algorithms (e.g., Insertion Sort) or divide-and-conquer algorithms (e.g., Merge Sort), Bogosort attempts to guess the entire solution in a single operation.
 
-The analysis of Bogosort necessitates a rigorous engagement with probability theory, specifically the properties of the \textbf{geometric distribution}, the factorial growth of permutation groups ($S_n$), and the mechanics of pseudorandom number generation (PRNG).
+\subsection{Real-World Relevance}
+While often regarded as a pedagogical joke or a theoretical curiosity, Bogosort provides a critical boundary condition for the study of randomized algorithms. It serves as a \textbf{Las Vegas algorithm} that, while guaranteeing a correct output upon termination, possesses a runtime distribution that is theoretically unbounded and practically intractable for all but the smallest inputs. The analysis of Bogosort necessitates a rigorous engagement with probability theory, specifically the geometric distribution and the factorial growth of permutation groups ($S_n$).
 
-\section{Classification and Theoretical Foundations}
-
-\subsection{Randomized Algorithms: Las Vegas vs. Monte Carlo}
-To understand Bogosort, one must first situate it within the taxonomy of randomized algorithms. Unlike deterministic algorithms, which follow a fixed execution path for a given input, randomized algorithms incorporate a source of entropy (random bits) to guide their execution.
-
+\subsection{Objectives}
+This project aims to:
 \begin{itemize}
-    \item \textbf{Monte Carlo Algorithms:} These algorithms have a deterministic runtime bound but a probabilistic correctness guarantee. They may produce an incorrect result with a small probability.
-    \item \textbf{Las Vegas Algorithms:} These algorithms guarantee a correct result upon termination, but their runtime is a random variable. They "gamble" with time rather than accuracy.
+    \item Provide an exhaustive examination of Bogosort's theoretical underpinnings.
+    \item Derive its expected runtime ($E[X]$) and variance through formal probabilistic proofs.
+    \item Analyze its Space Complexity (Auxiliary vs. Total).
+    \item Empirically benchmark the algorithm against deterministic baselines (Bubble Sort, Merge Sort) to demonstrate the "complexity cliff" of factorial growth.
 \end{itemize}
 
-\textbf{Note:} Bogosort is a \textbf{Las Vegas algorithm}. It will never return an unsorted list (correctness is guaranteed by the verification step), but the time required to find the sorted permutation is probabilistic.
+\section{Algorithm Descriptions}
 
-\subsection{The Generate-and-Test Paradigm}
-Bogosort operates on the extreme end of the "generate and test" spectrum. Constructive algorithms, such as Insertion Sort, build the solution incrementally. Divide-and-conquer algorithms, like Merge Sort, break the problem into tractable sub-problems. In contrast, Bogosort attempts to guess the entire solution in a single operation.
+\subsection{Theoretical Explanation}
+\textbf{Mechanism:} Bogosort operates on the extreme end of the "generate and test" spectrum. Its structure is defined by the following loop:
 
-The algorithm's structure is defined by the following loop:
-\begin{verbatim}
+\begin{lstlisting}[language=C, basicstyle=\ttfamily]
 while (!is_sorted(list)) {
     shuffle(list);
 }
-\end{verbatim}
+\end{lstlisting}
 
-This loop implies two distinct phases per iteration:
+This implies two phases per iteration:
 \begin{enumerate}
     \item \textbf{Generation:} Creating a random permutation from the symmetric group $S_n$ (the set of all $n!$ permutations).
     \item \textbf{Verification:} Checking for monotonic order.
 \end{enumerate}
-The inefficiency arises because the size of the search space ($S_n$) grows factorially, while the number of valid solutions is exactly \textbf{1} (assuming distinct elements).
 
-\subsection{The Infinite Monkey Theorem and Termination}
-The theoretical justification for running Bogosort lies in the \textbf{Infinite Monkey Theorem}. To prove termination, we consider the probability space. Let $A$ be an array of $n$ distinct elements.
+\textbf{Termination and the Infinite Monkey Theorem:} The theoretical justification for termination lies in the Infinite Monkey Theorem. Let $A$ be an array of $n$ distinct elements.
 \begin{itemize}
     \item Total Permutations: $n!$
     \item Probability of success in one trial ($p$): $p = \frac{1}{n!}$
 \end{itemize}
+Since trials are independent (assuming a properly seeded PRNG), the probability that the algorithm has not terminated after $k$ iterations is $(1 - \frac{1}{n!})^k$. As $k \to \infty$, this probability approaches 0, proving the algorithm terminates almost surely (probability 1).
 
-Since trials are independent, the probability of failure in a single trial is $q = 1 - p$. The probability that the algorithm has not terminated after $k$ iterations is $q^k$:
-\[ P(\text{Not sorted after } k \text{ steps}) = \left(1 - \frac{1}{n!}\right)^k \]
-As $k \to \infty$, this probability approaches 0. Thus, the algorithm terminates \textbf{almost surely} (with probability 1).
+\section{Asymptotic Analysis}
 
-\section{Probabilistic Analysis of Runtime and Variance}
-The runtime of Bogosort is dominated by the number of shuffles required to reach the sorted state. This follows a \textbf{Geometric Distribution}.
+\subsection{Time Complexity (Probabilistic)}
+The runtime is dominated by the number of shuffles, which follows a \textbf{Geometric Distribution}.
 
-\subsection{Derivation of Expected Runtime}
-Let $X$ be a random variable representing the number of shuffles performed. $X$ follows a geometric distribution with success probability $p = 1/n!$. The expected value $E[X]$ is:
-\[ E[X] = \frac{1}{p} = n! \]
-Since each shuffle and check operation takes $O(n)$ time, the total expected time complexity $T_{avg}$ is:
-\[ T_{avg}(n) = O(n) \cdot E[X] = O(n \cdot n!) \]
+\textbf{Expected Runtime:}
+The expected value $E[X]$ is derived from the PMF $P(X=k) = (1-p)^{k-1}p$:
+$$E[X] = \sum_{k=1}^{\infty} k(1-p)^{k-1}p = \frac{1}{p} = n!$$
+Since each shuffle/check takes $O(n)$, the Total Expected Time is:
+$$T_{avg}(n) = O(n \cdot n!)$$
 
-\subsection{Derivation of Variance and Standard Deviation}
-The variance of a geometric distribution is given by:
-\[ Var(X) = \frac{1-p}{p^2} \approx (n!)^2 \]
-The standard deviation $\sigma$ is:
-\[ \sigma = \sqrt{Var(X)} \approx n! \]
-This is a crucial insight: \textbf{the standard deviation of Bogosort's runtime is approximately equal to its expected runtime.} This indicates extreme volatility.
+\textbf{Variance and Standard Deviation:}
+The variance of the geometric distribution is $Var(X) = \frac{1-p}{p^2} \approx (n!)^2$.
+The standard deviation is $\sigma \approx n!$.
+This indicates extreme volatility; the standard deviation is approximately equal to the expected runtime, meaning a single run can vary wildly from the mean.
 
-\subsection{The Memoryless Property}
-A defining characteristic of the geometric distribution is that it is \textbf{memoryless}.
-\[ P(X > m+n \mid X > m) = P(X > n) \]
-Past failures do not influence future probabilities. The algorithm does not "make progress."
+\textbf{Memoryless Property:}
+$P(X > m+n \mid X > m) = P(X > n)$. Past failures do not influence future probabilities; the algorithm does not "make progress."
 
-\section{Empirical Methodology}
-To validate the theoretical bounds, a rigorous benchmarking experiment was conducted using a \textbf{Hybrid Empirical-Theoretical Approach}.
+\subsection{Space Complexity}
+While Bogosort is strictly intractable regarding time, it is surprisingly efficient regarding memory usage.
+
+\textbf{Auxiliary Space Complexity:} $O(1)$.
+Bogosort functions as an in-place algorithm. The verification step requires a single pass using constant extra space for iterator variables. The permutation step (typically Fisher-Yates shuffle) swaps elements within the existing array structure without allocating new memory.
+
+\textbf{Total Space Complexity:} $O(n)$ (Required to store the input array).
+
+\section{Implementation Details}
+
+\subsection{Design Choices}
+To validate the theoretical bounds, a Hybrid Empirical-Theoretical Approach was adopted.
 \begin{itemize}
-    \item \textbf{Control Group (Bubble/Merge Sort):} Benchmarked for the full range of $N=2$ to $N=20$.
-    \item \textbf{Bogosort (Statistical Smoothing):} Averaged over 20 trials for small inputs to mitigate variance.
-    \item \textbf{Hybrid Extrapolation:} For $N > 13$, we utilized the recurrence relation $T(n) \approx T(n-1) \times n$ to project runtimes.
+    \item \textbf{Language:} The algorithm was implemented in C to utilize high-precision POSIX timing and minimize overhead.
+    \item \textbf{Orchestration:} A benchmarking suite was designed to invoke compiled executables as subprocesses. This isolation ensured that long-running or stalled Bogosort trials did not crash the main measurement tool.
 \end{itemize}
 
-\section{Results and Analysis}
-The empirical results confirm the "complexity cliff" predicted by theory.
+\subsection{Data Structures}
+\textbf{Arrays:} Standard C integer arrays were used rather than linked lists to facilitate $O(1)$ random access, which is required for the Fisher-Yates shuffle algorithm used in the generation phase.
+
+\subsection{Implementation Challenges}
+\textbf{Variance Management} was the most significant challenge. Due to the $\sigma \approx n!$ standard deviation, raw timing data was extremely noisy. A "Statistical Smoothing" logic was implemented:
 \begin{itemize}
-    \item $N=9$: Milliseconds.
-    \item $N=11$: Seconds.
-    \item $N=12$: Minutes.
-    \item $N=13$: $\approx$ 20 minutes per trial.
-    \item $N=20$: Extrapolated runtime $> 70,000$ years.
+    \item Small Inputs ($N \le 10$): Averaged over 20 trials per $N$.
+    \item Medium Inputs ($N = 11, 12, 13$): Averaged over 5 trials per $N$.
+    \item Large Inputs ($N > 13$): Treated as the "Computation Horizon" where real-time execution became impossible.
+\end{itemize}
+
+\section{Experimental Setup}
+\begin{itemize}
+    \item \textbf{Software:} GCC Compiler, Linux Environment.
+    \item \textbf{Timing:} \texttt{clock\_gettime} (monotonic clock) was used for nanosecond-precision wall-clock measurement.
+    \item \textbf{Datasets:} Synthetic Data: Random permutations of integers $[1..N]$ were generated for input sizes ranging from $N=2$ to $N=20$. Control Group: Deterministic algorithms (Bubble Sort, Merge Sort) were run on the same datasets to serve as a robust baseline.
+\end{itemize}
+
+\section{Results \& Analysis}
+
+\subsection{Metrics and Extrapolation}
+The primary metric was Wall-Clock Time. For inputs beyond the computation horizon ($N > 13$), runtime was extrapolated using a recurrence relation.
+
+\textbf{Derivation of the Extrapolation Formula:}
+While the total time complexity is $O(n \cdot n!)$, we can approximate the growth factor when increasing the input size from $N-1$ to $N$:
+$$\frac{T(n)}{T(n-1)} \approx \frac{n \cdot n!}{(n-1) \cdot (n-1)!}$$
+$$\frac{T(n)}{T(n-1)} \approx \frac{n}{n-1} \cdot \frac{n!}{(n-1)!}$$
+$$\frac{T(n)}{T(n-1)} \approx \frac{n}{n-1} \cdot n$$
+For large $N$, the term $\frac{n}{n-1}$ approaches 1. Therefore, the growth is dominated by the term $n$. We utilize the simplified recurrence relation for our projections:
+$$T(n) \approx T(n-1) \times n$$
+
+\subsection{Empirical Performance vs. Theoretical Complexity}
+
+\textbf{Comparison: Bogosort vs. Bubble Sort ($O(n^2)$)}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+    \toprule
+    Feature & Bubble Sort & Bogosort \\
+    \midrule
+    Time Complexity & $O(n^2)$ & $O(n \cdot n!)$ \\
+    Space Complexity & $O(1)$ (Auxiliary) & $O(1)$ (Auxiliary) \\
+    Ops for N=20 & $\approx 400$ & $\approx 5 \times 10^{19}$ \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{Comparison: Bogosort vs. Merge Sort ($O(n \log n)$)}
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+    \toprule
+    Feature & Merge Sort & Bogosort \\
+    \midrule
+    Time Complexity & $O(n \log n)$ & $O(n \cdot n!)$ \\
+    Space Complexity & $O(n)$ (Auxiliary) & $O(1)$ (Auxiliary) \\
+    Ops for N=20 & $\approx 86$ & $\approx 5 \times 10^{19}$ \\
+    \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{Discussion of Results}
+The empirical results confirm the "complexity cliff" predicted by theory:
+\begin{itemize}
+    \item \textbf{Bubble/Merge Sort:} For $N=1$ to $N=13$, execution was nearly instantaneous ($< 10^{-5}$ seconds).
+    \item \textbf{Bogosort:}
+    \begin{itemize}
+        \item $N=9$: Milliseconds.
+        \item $N=12$: Minutes.
+        \item $N=13$: $\approx$ 20 minutes per trial.
+        \item $N=20$: Extrapolated runtime $> 70,000$ years.
+    \end{itemize}
 \end{itemize}
 
 \begin{figure}[H]
     \centering
-    % Ensure this file exists in your folder
     \includegraphics[width=0.85\textwidth]{bogosort_graph.png}
-    \caption{Bogosort Benchmark Graph showing factorial growth.}
-    \label{fig:bogosort}
+    \caption{Analysis of Bogosort: Empirical vs Theoretical Complexity}
+    \label{fig:bogo}
 \end{figure}
+
+The logarithmic plot reveals that while Bubble and Merge sort scale polynomially, Bogosort's curve shoots vertically. This validates that $O(n!)$ algorithms are physically impossible for non-trivial inputs, regardless of hardware speed. The data also confirmed the heavy-tail behavior; one specific trial for $N=10$ took $5\times$ longer than the average, consistent with the high variance $\sigma \approx n!$.
+
+\section{Conclusion}
+ This report provided a structural and mathematical decomposition of Bogosort. We classified it as a Las Vegas algorithm with $O(n \cdot n!)$ time complexity and $O(1)$ auxiliary space complexity. The derivation of the Geometric Distribution confirmed that the standard deviation of the runtime is equal to the mean, resulting in high unpredictability.
+
+ The primary limitation was the "Computation Horizon" at $N=13$. Due to factorial growth, it is impossible to gather empirical data for larger inputs within a human lifetime. 
+
 
 \newpage
 
@@ -272,102 +354,140 @@ Both algorithms were implemented in C.
 \chapter{Miller-Rabin Primality Test}
 
 \section{Abstract}
-This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The algorithm achieves $O(k \log^3 n)$ time complexity, vastly superior to Trial Division's $O(\sqrt{n})$ for large integers. Our implementation handles 64-bit integers with overflow protection via 128-bit intermediate calculations and employs MT19937-64 for high-quality random witness selection. Experimental results demonstrate Miller-Rabin maintains microsecond-level execution times across 20-64 bit inputs while Trial Division exhibits exponential slowdown beyond 48 bits. Error analysis on Carmichael numbers shows empirical false positive rates well below the theoretical $4^{-k}$ bound, with all achieving 0\% error by $k=4$.
+This report presents a from-scratch implementation of the Miller-Rabin probabilistic primality testing algorithm in C++. The Miller-Rabin algorithm achieves $O(k \log^3 n)$ time complexity where $k$ is the number of iterations, making it vastly superior to Trial Division's $O(\sqrt{n})$ for large integers. Our implementation handles the full 64-bit unsigned integer range with overflow protection via 128-bit intermediate calculations and employs MT19937-64 for high-quality random witness selection. Experimental results demonstrate Miller-Rabin maintains microsecond-level execution times across 20-64 bit inputs while Trial Division exhibits exponential slowdown beyond 48 bits. Error rate analysis on five Carmichael numbers (561, 1105, 1729, 2465, 6601) shows empirical false positive rates well below the theoretical $4^{-k}$ bound, with all achieving 0\% error by $k=4$. An automated benchmarking pipeline validates theoretical complexity claims and demonstrates practical effectiveness for cryptographic applications.
 
 \section{Introduction}
-Primality testing determines whether a given integer $n$ is prime or composite—a fundamental problem in cryptography. RSA encryption, digital signatures, and key generation require efficient methods to test large primes. Traditional deterministic methods like Trial Division become prohibitive for cryptographic-scale integers. The Miller-Rabin test is the industry standard for cryptographic primality testing, used in RSA key generation, cryptocurrency systems, and TLS/SSL certificate generation. The ability to test primality in polylogarithmic time enables modern public-key cryptography.
+
+\subsection{Problem Definition}
+Primality testing determines whether a given integer $n$ is prime or composite—a fundamental problem in number theory with critical applications in modern cryptography. RSA encryption, digital signatures, and key generation require efficient methods to test large prime numbers, often with hundreds of digits. Traditional deterministic methods like Trial Division become computationally prohibitive for cryptographic-scale integers, necessitating efficient probabilistic approaches.
+
+\subsection{Real-World Relevance}
+The Miller-Rabin primality test is the industry standard for cryptographic primality testing:
+\begin{itemize}
+    \item \textbf{RSA Key Generation}: 1024/2048-bit RSA keys require testing hundreds of candidate primes
+    \item \textbf{Cryptocurrency}: Blockchain systems use prime-based cryptographic primitives
+    \item \textbf{Digital Signatures}: DSA and ECDSA rely on prime number generation
+    \item \textbf{Secure Communications}: TLS/SSL certificate generation requires efficient primality verification
+\end{itemize}
+The ability to test primality in polylogarithmic time rather than exponential time enables modern public-key cryptography.
+
+\subsection{Project Objectives}
+\begin{itemize}
+    \item Implement Miller-Rabin primality test from scratch without external algorithmic libraries.
+    \item Validate theoretical $O(k \log^3 n)$ complexity through empirical benchmarking.
+    \item Analyze error characteristics via Carmichael number testing.
+    \item Compare performance against deterministic Trial Division baseline.
+    \item Provide reproducible infrastructure with automated benchmarking pipeline.
+\end{itemize}
 
 \section{Algorithm Description}
 
 \subsection{Theoretical Foundation}
-The Miller-Rabin test is a randomized Monte Carlo algorithm determining whether $n$ is composite or "probably prime." It improves upon Fermat's test by checking for non-trivial square roots of unity modulo $n$, detecting Carmichael numbers that fool simpler tests.
+The Miller-Rabin test is a randomized Monte Carlo algorithm determining whether an integer $n$ is composite or "probably prime." It improves upon Fermat's test by checking for non-trivial square roots of unity modulo $n$, detecting Carmichael numbers that fool simpler tests.
 
-For odd integer $n$, express $n-1 = 2^r \cdot d$ where $d$ is odd. For random base $a$ ($1 < a < n-1$), $n$ is "probably prime" if either:
+\textbf{Mathematical Setup:}
+For odd integer $n$, express $n-1$ as:
+\[ n-1 = 2^r \cdot d \]
+where $d$ is odd and $r \ge 1$.
+
+\textbf{Miller-Rabin Conditions:}
+For random base $a$ ($1 < a < n-1$), $n$ is "probably prime" if either:
 \begin{enumerate}
     \item \textbf{Fermat Condition:} $a^d \equiv 1 \pmod{n}$
     \item \textbf{Square Root Condition:} $a^{2^j d} \equiv -1 \pmod{n}$ for some $0 \le j < r$
 \end{enumerate}
 Otherwise, $a$ is a "strong witness" and $n$ is definitively composite.
 
-For composite $n$, at most $(n-1)/4$ bases are "strong liars." Error probability: $P(\text{Error in } k \text{ rounds}) \le 4^{-k}$.
+\textbf{Correctness (Rabin, 1980):}
+For composite $n$, at most $(n-1)/4$ bases are "strong liars." Error probability for single test:
+\[ P(\text{Error}) \le \frac{1}{4} \]
+For $k$ independent iterations:
+\[ P(\text{Error in k rounds}) \le 4^{-k} \]
 
-\subsection{Complexity Analysis}
-\textbf{Time Complexity:} Each round performs modular exponentiation with cost $O(\log^3 n)$. For $k$ iterations: $T(n) = O(k \log^3 n)$. This polylogarithmic complexity enables instant primality testing of large numbers.
+\subsection{Complexity}
+Input size: $L = \log_2 n$ bits.
 
-\textbf{Space Complexity:} $O(1)$ auxiliary space—all calculations reuse constant 64/128-bit variables.
-
-\section{Implementation Details}
-
-\subsection{Programming Environment}
-\textbf{Language:} C++11 with GCC \texttt{-O3} optimization. \textbf{Core algorithm uses only standard libraries} (\texttt{<cstdint>}, \texttt{<random>}, \texttt{<chrono>}). SymPy/matplotlib used for benchmarking infrastructure only.
-
-\subsection{Key Design Choices}
-
-\textbf{1. Overflow Protection:} Uses \texttt{unsigned \_\_int128} for intermediate calculations to prevent silent overflow in 64-bit modular multiplication.
-
-\textbf{2. High-Quality RNG:} MT19937-64 provides $2^{19937}-1$ period vs standard \texttt{rand()}, critical for probabilistic reliability.
-
-\textbf{3. Modular Architecture:} Core algorithm (\texttt{src/miller\_rabin.cpp/hpp}), baseline comparison (\texttt{src/trial\_division.cpp/hpp}), batch processing (\texttt{src/main\_batch.cpp}), dataset generation (\texttt{scripts/generate\_datasets.py}), visualization (\texttt{scripts/plot\_results.py}), and one-command automation (\texttt{run\_pipeline.sh}).
-
-\subsection{Implementation Challenges}
-\textbf{Challenge:} 64-bit overflow in modular multiplication. \textbf{Solution:} \texttt{unsigned \_\_int128} casting prevents silent overflow across entire \texttt{uint64\_t} range—a subtle bug most implementations miss.
-
-\section{Experimental Setup}
-\textbf{Environment:} AMD Ryzen x86-64, Linux (Ubuntu), GCC C++11, Python 3.12.
-
-\textbf{Datasets:} All synthetically generated via SymPy:
+\textbf{Modular Exponentiation Cost:}
 \begin{itemize}
-    \item \textbf{Carmichael Numbers:} 5 composites (561, 1105, 1729, 2465, 6601) for error analysis
-    \item \textbf{Trial Division Primes:} 80 primes (20-50 bits) for baseline comparison
-    \item \textbf{Miller-Rabin Primes:} 60 primes (20-64 bits) for full-range scaling
-    \item \textbf{K-Scaling:} Single 64-bit prime tested with $k=1..50$ (100 iterations each)
+    \item Multiplying two $L$-bit numbers: $O(L^2)$
+    \item Square-and-Multiply performs $O(L)$ multiplications: $O(L^3)$
 \end{itemize}
 
-\textbf{Metrics:} Wall-clock time (microseconds), False Positive Rate (FPR), bit length, linear regression $R^2$.
+\textbf{Single Round Cost:}
+\begin{itemize}
+    \item Initial exponentiation $a^d \pmod n$: $O(L^3)$
+    \item Squaring loop ($\le r \le L$ iterations): $O(L^3)$
+    \item Total: $O(L^3)$
+\end{itemize}
+
+\textbf{Overall Complexity:}
+\[ T(n) = k \cdot O(L^3) = O(k \log^3 n) \]
+This polylogarithmic complexity enables instant primality testing of large numbers.
+
+\textbf{Space Complexity:}
+$O(1)$ auxiliary space—all calculations reuse constant number of 64/128-bit variables.
+
+\section{Implementation Details}
+\subsection{Programming Environment}
+\begin{itemize}
+    \item \textbf{Language:} C++11
+    \item \textbf{Compiler:} GCC with \texttt{-std=c++11 -O3}
+    \item \textbf{Standard Libraries:} \texttt{<cstdint>, <random>, <chrono>, <iostream>}
+    \item \textbf{External Libraries:} None for core algorithm (SymPy/matplotlib for benchmarking only)
+\end{itemize}
+
+\subsection{Key Design Choices}
+\textbf{Integer Representation:} \texttt{uint64\_t} ($0$ to $2^{64}-1$) balances range, performance, and overflow handling capabilities.
+
+\textbf{Critical Implementation Features:}
+\begin{itemize}
+    \item \textbf{Overflow Protection:} Used \texttt{unsigned \_\_int128} casting for intermediate calculations to prevent silent overflow.
+    \item \textbf{High-Quality RNG:} \texttt{std::mt19937\_64} provides superior statistical properties ($2^{19937}-1$ period) vs standard \texttt{rand()}.
+    \item \textbf{Modular Exponentiation:} Square-and-Multiply algorithm: $O(\log \text{exp})$ instead of $O(\text{exp})$ naive approach.
+\end{itemize}
+
+\subsection{Implementation Challenges}
+\begin{itemize}
+    \item \textbf{Challenge 1:} 64-bit overflow in modular multiplication. \textbf{Solution:} \texttt{unsigned \_\_int128} casting.
+    \item \textbf{Challenge 2:} Statistical independence across $k$ iterations. \textbf{Solution:} Fresh random witness per iteration via \texttt{std::random\_device} seeding.
+\end{itemize}
+
+\section{Experimental Setup}
+\begin{itemize}
+    \item \textbf{Hardware:} AMD Ryzen x86-64, RAM < 100MB usage
+    \item \textbf{OS:} Linux (Ubuntu-based)
+    \item \textbf{Compiler:} GCC C++11
+    \item \textbf{Datasets:} Carmichael Numbers (561, 1105, 1729, 2465, 6601), Trial Division Primes (20-50 bits), Miller-Rabin Primes (20-64 bits).
+\end{itemize}
 
 \section{Results \& Analysis}
-
 \subsection{Runtime Performance: The "Exponential Wall"}
-Trial Division tested on 20-50 bits (80 cases); Miller-Rabin on 20-64 bits with $k=5$ (60 cases, 1000 iterations averaged).
+\begin{itemize}
+    \item **20-30 bits:** Comparable performance (sub-millisecond)
+    \item **32-40 bits:** Trial Division slows (~2-30 ms)
+    \item **48+ bits:** Trial Division "wall" (seconds per test)
+    \item **64 bits:** Trial Division impractical; Miller-Rabin remains microsecond-level
+\end{itemize}
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{miller_rabin_runtime.png}
-    \caption{Runtime comparison (log-log scale). Trial Division exhibits $O(\sqrt{n})$ exponential growth; Miller-Rabin maintains flat $O(k \log^3 n)$ profile.}
-    \label{fig:mr_runtime}
+    \caption{Runtime comparison (log-log scale). Trial Division exhibits O(sqrt(n)) exponential growth; Miller-Rabin maintains flat O(k log^3 n) profile.}
+    \label{fig:mr_run}
 \end{figure}
 
-\textbf{Key Findings:} At 20-30 bits, both algorithms show comparable sub-millisecond performance. Trial Division slows to 2-30 ms at 32-40 bits, hits a "wall" at 48+ bits (seconds per test), and becomes impractical at 64 bits. Miller-Rabin maintains microsecond-level execution across the entire range. Experimental results validate theoretical complexity—Trial Division's $O(2^{L/2})$ exponential growth vs Miller-Rabin's $O(k \log^3 n)$ polylogarithmic scaling becomes stark beyond 40 bits.
-
 \subsection{Error Rate Analysis: Carmichael Numbers}
-Five Carmichael numbers (561, 1105, 1729, 2465, 6601) tested with 10,000 trials per ($k$, number) for $k=1..10$.
+Tested on 5 Carmichael numbers with 10,000 trials. All converged to 0\% by $k=4$, far exceeding the theoretical guarantee of $4^{-k}$.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.85\textwidth]{miller_rabin_error.png}
-    \caption{Individual Carmichael FPR vs theoretical $4^{-k}$ bound (log scale). All reach 0\% by $k=4$.}
-    \label{fig:mr_error}
+    \caption{Individual Carmichael FPR vs theoretical bound.}
+    \label{fig:mr_err}
 \end{figure}
 
-\begin{table}[H]
-\centering
-\begin{tabular}{|c|c|c|c|c|}
-\hline
-\textbf{k} & \textbf{Theoretical} & \textbf{561} & \textbf{1105} & \textbf{1729} \\
-\hline
-1 & 25.0\% & $\sim$1.2\% & $\sim$2.5\% & $\sim$1.5\% \\
-2 & 6.25\% & $\sim$0.1\% & $\sim$0.3\% & $\sim$0.2\% \\
-3 & 1.56\% & 0\% & 0\% & 0\% \\
-\hline
-\end{tabular}
-\caption{Empirical FPR vs Theoretical Bound}
-\label{tab:carmichael}
-\end{table}
-
-Theoretical $4^{-k}$ bound is worst-case; actual strong liar density varies per composite. Individual numbers show different $k=1$ FPR reflecting varying distributions. All converge to 0\% by $k=4$, far exceeding theoretical guarantee.
-
 \subsection{Linear Scaling with k}
-Single 64-bit prime tested with $k=1..50$ (100 iterations per $k$).
+$R^2 > 0.99$ confirmed perfect linearity for fixed $n$, validating $O(k)$ scaling. Slope was $\approx 4-5 \mu s$ per iteration.
 
 \begin{figure}[H]
     \centering
@@ -376,23 +496,23 @@ Single 64-bit prime tested with $k=1..50$ (100 iterations per $k$).
     \label{fig:mr_k_scaling}
 \end{figure}
 
-Perfect linearity ($R^2 > 0.99$) confirms $O(k)$ scaling. Slope: $\sim$4-5 $\mu$s per iteration. Trade-off: doubling $k$ doubles runtime but quadruples reliability. Recommended values: $k=5$ ($\sim$25 $\mu$s, 0.1\% error), $k=10$ ($\sim$50 $\mu$s, $10^{-5}$ error), $k=20$ ($\sim$100 $\mu$s, cryptographic grade), $k=40$ ($<$1 ms, RSA standard). Even $k=40$ completes sub-millisecond.
-
 \section{Conclusion}
-Successfully implemented and validated Miller-Rabin: (1) $O(k \log^3 n)$ complexity confirmed vs $O(\sqrt{n})$ Trial Division baseline, (2) microsecond execution across all bit sizes vs exponential slowdown, (3) empirical FPR exceeds theoretical guarantees (0\% by $k=4$), (4) linear $O(k)$ scaling enables flexible security-performance trade-offs.
-
-\textbf{Limitations:} 64-bit range (cryptographic needs 1024+ bits), limited Carmichael sample, hardware-specific timing, no deterministic variant comparison.
-
-\textbf{Future Work:} Arbitrary-precision arithmetic (GMP), deterministic Miller test, multi-threaded parallelization, GPU acceleration, broader composite testing.
+Successfully implemented and validated Miller-Rabin probabilistic primality test:
+\begin{enumerate}
+    \item \textbf{Complexity Validation:} $O(k \log^3 n)$ confirmed vs $O(\sqrt{n})$ Trial Division baseline.
+    \item \textbf{Performance:} Microsecond execution across all bit sizes vs exponential Trial Division slowdown.
+    \item \textbf{Reliability:} Empirical FPR exceeds theoretical guarantees (0\% by $k=4$).
+    \item \textbf{Scalability:} Linear $O(k)$ scaling enables flexible security-performance trade-offs.
+\end{enumerate}
 
 \section{Bonus Disclosure}
-\textbf{Bonus 1:} 64-bit overflow protection (\texttt{\_\_int128})—subtle bug most miss, ensures correctness across entire \texttt{uint64\_t} range.
-
-\textbf{Bonus 2:} MT19937-64 RNG—superior $2^{19937}-1$ period vs \texttt{rand()}, critical for probabilistic reliability.
-
-\textbf{Bonus 3:} Automated reproducible pipeline—complete infrastructure with one-command automation (\texttt{run\_pipeline.sh}).
-
-\textbf{Bonus 4:} Individual number analysis—tracks each Carmichael number separately, reveals strong liar density variations.
+I claim bonus consideration for implementations exceeding core requirements:
+\begin{enumerate}
+    \item \textbf{Bonus 1: 64-bit Overflow Protection (\texttt{\_\_int128}):} Ensures correctness across entire \texttt{uint64\_t} range.
+    \item \textbf{Bonus 2: MT19937-64 High-Quality RNG:} Superior to standard \texttt{rand()} ($2^{19937}-1$ period).
+    \item \textbf{Bonus 3: Automated Reproducible Pipeline:} Complete infrastructure with dataset generation and batch processing.
+    \item \textbf{Bonus 4: Individual Number Analysis:} Tracks each Carmichael number separately vs averaging.
+\end{enumerate}
 
 \newpage
 
@@ -407,7 +527,7 @@ This project implements and analyzes Karger's randomized algorithm for the minim
 \section{Introduction}
 
 \subsection{The Minimum Cut Problem}
-The minimum cut (or "min cut") problem is a fundamental challenge in graph theory. Given an undirected graph $G=(V,E)$, a "cut" is a partition of the vertices $V$ into two disjoint non-empty sets, $S$ and $V \setminus S$. The "size" of a cut is the number of edges that cross this partition. The minimum cut problem asks for the cut with the minimum possible size.
+The minimum cut (or "min cut") problem is a fundamental challenge in graph theory. Given an undirected graph $G = (V, E)$, a "cut" is a partition of the vertices $V$ into two disjoint non-empty sets, $S$ and $V \setminus S$. The "size" of a cut is the number of edges that cross this partition. The minimum cut problem asks for the cut with the minimum possible size.
 
 \subsection{Real-World Relevance}
 The min cut problem models critical processes in various domains:
@@ -423,12 +543,12 @@ The objective is to implement Karger's randomized algorithm from scratch, analyz
 \section{Algorithm Description}
 
 \subsection{Theoretical Explanation}
-Karger's algorithm relies on the operation of edge contraction. The algorithm proceeds as follows:
+Karger's algorithm relies on the operation of \textbf{edge contraction}. The algorithm proceeds as follows:
 \begin{enumerate}
     \item \textbf{Start:} Begin with graph $G$ with $n$ vertices.
     \item \textbf{Loop:} While $|V| > 2$:
     \begin{itemize}
-        \item Select an edge $(u,v) \in E$ uniformly at random.
+        \item Select an edge $(u, v) \in E$ uniformly at random.
         \item Contract $u$ and $v$ into a single supernode.
         \item Remove self-loops; preserve parallel edges.
     \end{itemize}
@@ -436,34 +556,37 @@ Karger's algorithm relies on the operation of edge contraction. The algorithm pr
 \end{enumerate}
 
 \subsection{Mathematical Proof of Success Probability}
-Let $k$ be the size of the minimum cut in $G$. We want to calculate the probability that the algorithm outputs this specific min cut. The algorithm succeeds if it never contracts an edge belonging to the min cut.
+Let $k$ be the size of the minimum cut in $G$. We want to calculate the probability that the algorithm outputs this specific min cut. The algorithm succeeds if it \textit{never} contracts an edge belonging to the min cut.
 
 \textbf{Step 1: Probability of avoiding the min cut in the first contraction.}
-Since the min cut has size $k$, the degree of every vertex must be at least $k$. By the Handshaking Lemma, the total number of edges $m$ satisfies $2m = \sum \deg(v) \ge nk$, so $m \ge \frac{nk}{2}$. The probability of picking a min cut edge in the first step is:
-\[ P(fail_1) = \frac{k}{m} \le \frac{k}{nk/2} = \frac{2}{n} \]
-Thus, the probability of success is:
-\[ P(success_1) \ge 1 - \frac{2}{n} \]
+Since the min cut has size $k$, the degree of every vertex must be at least $k$ (otherwise, cutting that vertex's edges would yield a smaller cut). By the Handshaking Lemma, the total number of edges $m$ satisfies $2m = \sum \deg(v) \ge nk$, so $m \ge \frac{nk}{2}$.
+The probability of picking a min cut edge in the first step is:
+$$ P(\text{fail}_1) = \frac{k}{m} \le \frac{k}{nk/2} = \frac{2}{n} $$
+Thus, the probability of \textit{success} (not picking a min cut edge) is:
+$$ P(\text{success}_1) \ge 1 - \frac{2}{n} $$
 
 \textbf{Step 2: Probability of success over all contractions.}
-After $i$ contractions, we have $n-i$ vertices remaining. We still have not contracted a min cut edge, so the min cut size is still $k$. The number of edges remaining is at least $\frac{(n-i)k}{2}$. The probability of success at step $i+1$ is:
-\[ P(success_{i+1}|success_{1...i}) \ge 1 - \frac{k}{(n-i)k/2} = 1 - \frac{2}{n-i} \]
+Suppose after $i$ contractions, we have $n-i$ vertices remaining. We still have not contracted a min cut edge, so the min cut size is still $k$. The number of edges remaining is at least $\frac{(n-i)k}{2}$.
+The probability of success at step $i+1$ is:
+$$ P(\text{success}_{i+1} | \text{success}_{1 \dots i}) \ge 1 - \frac{k}{(n-i)k/2} = 1 - \frac{2}{n-i} $$
 The algorithm runs for $n-2$ steps. The total probability of success is the product:
-\[ P(success) \ge (1 - \frac{2}{n})(1 - \frac{2}{n-1}) \cdots (1 - \frac{2}{3}) \]
-\[ P(success) \ge \left(\frac{n-2}{n}\right)\left(\frac{n-3}{n-1}\right) \cdots \left(\frac{1}{3}\right) = \frac{2}{n(n-1)} = \binom{n}{2}^{-1} \]
+$$ P(\text{success}) \ge \left(1 - \frac{2}{n}\right) \left(1 - \frac{2}{n-1}\right) \cdots \left(1 - \frac{2}{3}\right) $$
+$$ P(\text{success}) \ge \left(\frac{n-2}{n}\right) \left(\frac{n-3}{n-1}\right) \cdots \left(\frac{1}{3}\right) = \frac{2}{n(n-1)} = \binom{n}{2}^{-1} $$
 This proves that a single run succeeds with probability $\Omega(1/n^2)$.
 
 \subsection{Asymptotic Analysis}
 \begin{itemize}
     \item \textbf{Time Complexity (Single Run):} Using an edge-list, contraction takes $O(m)$ or $O(n^2)$. Total for one run is $O(n^3)$.
-    \item \textbf{Total Time (High Probability):} To reduce the error rate to a small constant, we run the algorithm $T=O(n^2)$ times. Total time is $O(n^5)$.
+    \item \textbf{Total Time (High Probability):} To reduce the error rate to a small constant, we run the algorithm $T = O(n^2)$ times. Total time is $O(n^5)$.
 \end{itemize}
 
 \section{Implementation Details}
+
 \subsection{Data Structures Used}
-We utilized a simple \texttt{struct Graph} containing an integer \texttt{V} and a \texttt{std::vector<Edge>} list. This prioritizes simplicity and ease of "from scratch" implementation. We simulate contraction by iterating through the edge list and relabeling vertices, which is $O(m)$ but avoids complex pointer manipulation.
+We utilized a simple `struct Graph` containing an integer `V` and a `std::vector<Edge>` list. This prioritizes simplicity and ease of "from scratch" implementation. We simulate contraction by iterating through the edge list and relabeling vertices, which is $O(m)$ but avoids complex pointer manipulation.
 
 \subsection{Implementation Challenges}
-The primary challenge was handling self-loops efficiently during contraction to prevent wasted iterations. We implemented a check within the random selection loop to discard self-loops immediately.
+The primary challenge was handling self-loops efficiently during contraction to prevent wasted iterations. We implemented a v within the random selection loop to discard self-loops immediately.
 
 \section{Experimental Setup}
 \begin{itemize}
@@ -476,116 +599,172 @@ The primary challenge was handling self-loops efficiently during contraction to 
 \subsection{Results}
 We measured the success rate of finding the true min cut over 400 trials for varying iterations $T$.
 
+\subsection{comparative Analysis of Graph Size vs. Reliability}
+
+% Added [H] to force this image to stay exactly here
 \begin{figure}[H]
     \centering
-    % Ensure files exist
-    \includegraphics[width=0.85\textwidth]{karger_success_10.png}
-    \caption{Success Rate vs. Iterations (T) on n10.txt}
+    \includegraphics[width=1\linewidth]{success_rate10_vs_iterations.png}
+    \caption{Success rate on a simple graph with 10 nodes}
+    \label{fig:placeholder1}
 \end{figure}
 
+% Added [H] to force this image to stay immediately after the previous one
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{karger_success_20.png}
-    \caption{Success Rate vs. Iterations (T) on n20.txt}
+    \includegraphics[width=1\linewidth]{success_rate20_vs_iterations.png}
+    \caption{Success rate on a simple graph with 20 nodes}
+    \label{fig:placeholder2}
 \end{figure}
 
+% Added [H] to force this image to stay immediately after the previous one
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{karger_success_30.png}
-    \caption{Success Rate vs. Iterations (T) on n30.txt}
+    \includegraphics[width=1\linewidth]{success_rate30_vs_iterations.png}
+    \caption{Success rate on a simple graph with 30 nodes}
+    \label{fig:placeholder3}
 \end{figure}
 
-\subsection{Comparative Analysis of Graph Size vs. Reliability}
 A comparative analysis of the success rates for graph sizes $n=10$, $n=20$, and $n=30$ reveals two critical insights regarding the algorithm's scalability.
 
 \subsubsection{Inverse Relationship at Low Iterations}
 The most distinct difference between the datasets is observable at $T=1$ (a single Monte Carlo iteration). As the graph size $n$ increases, the single-run success rate monotonically decreases:
 \begin{itemize}
-    \item For $n=10$, the single-run success rate was approximately 0.72.
-    \item For $n=20$, this dropped to approximately 0.62.
-    \item For $n=30$, it further declined to 0.56.
+    \item For $n=10$, the single-run success rate was approximately $0.72$.
+    \item For $n=20$, this dropped to approximately $0.62$.
+    \item For $n=30$, it further declined to $0.56$.
 \end{itemize}
 This trend empirically validates the theoretical lower bound for a single run, $\Omega(n^{-2})$. As the search space grows, the probability of randomly selecting a min-cut edge during contraction increases, thereby reducing the likelihood of success for any individual trial.
 
 \subsubsection{Convergence Uniformity}
-Despite the initial disparity in difficulty, all three datasets converged to a 100\% success rate at approximately the same threshold ($T \approx 20$). This indicates that for sparse cycle graphs, the "difficulty" of the problem does not scale linearly with $n$ in terms of the iterations required for certainty. The exponential reduction in error rate provided by repetition ($1-(1-p)^T$) is sufficiently powerful to overcome the lower base probability ($p$) of the larger graphs within a negligible number of additional steps.
+Despite the initial disparity in difficulty, all three datasets converged to a $100\%$ success rate at approximately the same threshold ($T \approx 20$). This indicates that for sparse cycle graphs, the "difficulty" of the problem does not scale linearly with $n$ in terms of the iterations required for certainty. The exponential reduction in error rate provided by repetition ($1 - (1-p)^T$) is sufficiently powerful to overcome the lower base probability ($p$) of the larger graphs within a negligible number of additional steps.
 
 \subsection{Runtime Analysis}
+
 We measured the wall-clock execution time of the algorithm as a function of the graph size $n$. For each size, the algorithm was configured to run $T=n^2$ iterations, as recommended for a reasonably high success probability.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.85\textwidth]{karger_runtime.png}
-    \caption{Average runtime (in milliseconds) of Karger's algorithm versus the number of vertices $n$.}
+    % Replace 'runtime_vs_size.png' with the filename you uploaded to Overleaf
+    \includegraphics[width=0.8\textwidth]{runtime_vs_size.png}
+    \caption{Average runtime (in milliseconds) of Karger's algorithm versus the number of vertices $n$. The algorithm performed $n^2$ iterations for each data point.}
+    \label{fig:runtime}
 \end{figure}
 
 \subsubsection{Discussion of Runtime Results}
-As illustrated in the runtime graph, the runtime exhibits a clear non-linear, polynomial growth trend.
+As illustrated in Figure \ref{fig:runtime}, the runtime exhibits a clear non-linear, polynomial growth trend.
+
 \begin{itemize}
-    \item \textbf{Polynomial Scaling:} The curve curves upwards, confirming that the time complexity is polynomial rather than linear. This is consistent with our theoretical analysis. Our implementation uses an edge-list representation where contracting an edge requires iterating through the list, taking $O(m)$ time. A single run performs $n-2$ contractions, taking $O(n \cdot m)$. With $T=n^2$ iterations, the total theoretical complexity for sparse graphs is roughly $O(n^4)$.
+    \item \textbf{Polynomial Scaling:} The curve curves upwards, confirming that the time complexity is polynomial rather than linear. This is consistent with our theoretical analysis. Our implementation uses an edge-list representation where contracting an edge requires iterating through the list, taking $O(m)$ time. A single run performs $n-2$ contractions, taking $O(n \cdot m)$. With $T=n^2$ iterations, the total theoretical complexity for sparse graphs (where $m \approx n$) is roughly $O(n^4)$.
+    
     \item \textbf{Observations at Scale:} 
     \begin{itemize}
         \item At $n=10$, the runtime is negligible ($\approx 5$ ms).
         \item At $n=50$, the runtime increases to $\approx 260$ ms.
     \end{itemize}
     While the theoretical bound suggests a steep $O(n^4)$ increase, the observed growth is slightly gentler (approximately $O(n^{2.5})$ in this specific range). This discrepancy is likely due to the small input sizes ($N \le 50$), where constant factors and compiler optimizations (like vector handling) have a significant impact before the asymptotic behavior fully dominates.
+    
     \item \textbf{Practical Implications:} Despite the polynomial growth, the algorithm remains computationally feasible for small to medium graphs ($n \le 50$) on standard consumer hardware, taking only fractions of a second. However, the trend indicates that for significantly larger graphs (e.g., $n=500$), the runtime would become prohibitive without optimization (such as the Karger-Stein approach).
 \end{itemize}
 
+
+Our results validate the theoretical bound. For the "hard" dense graphs, the success rate started near 0\% for low $T$ and climbed slowly, consistent with the $1 - e^{-T/n^2}$ prediction. For simpler cycle graphs, the algorithm converged much faster, demonstrating that the theoretical bound is a worst-case guarantee.
+
+% === 7. CONCLUSION ===
+%
 \section{Conclusion}
 We successfully implemented and analyzed Karger's algorithm. The empirical data confirms the trade-off between runtime (iterations) and reliability. While computationally expensive for large graphs due to the $O(n^2)$ repetition requirement, it offers a simple and elegant solution for smaller instances.
 
-\section{Bonus Disclosure: Implementation and Analysis of the Karger-Stein Algorithm}
-As a bonus component for this project, I implemented the Karger-Stein (Recursive Contraction) Algorithm, a significant optimization of the basic Karger algorithm. This section details the algorithm, provides a mathematical derivation of its superior bounds, and presents a comparative empirical analysis against my base implementation.
+% === BONUS DISCLOSURE ===
+%
+\section*{Bonus Disclosure: Implementation and Analysis of the Karger-Stein Algorithm}
 
-\subsection{Algorithm Description}
+As a bonus component for this project, I implemented the \textbf{Karger-Stein (Recursive Contraction) Algorithm}, a significant optimization of the basic Karger algorithm. This section details the algorithm, provides a mathematical derivation of its superior bounds, and presents a comparative empirical analysis against my base implementation.
+
+\subsection{1. Algorithm Description}
 The Karger-Stein algorithm improves upon the basic approach by addressing its primary inefficiency: the high probability of contracting a min-cut edge during the final stages of the algorithm (when $n$ is small), compared to the low probability during the early stages.
+
 Instead of running the full contraction process $O(n^2)$ times from scratch, Karger-Stein shares the "safe" early contractions across multiple trials using recursion.
-\begin{enumerate}
+\begin{itemize}
     \item \textbf{Step 1:} Contract the graph $G$ down to $t = \lceil 1 + \frac{n}{\sqrt{2}} \rceil$ vertices.
     \item \textbf{Step 2:} Create two independent copies of this partially contracted graph.
     \item \textbf{Step 3:} Recursively compute the min cut on both copies.
     \item \textbf{Step 4:} Return the minimum of the two results.
-\end{enumerate}
+\end{itemize}
 This branching strategy focuses computational effort on the "dangerous" later stages of contraction.
 
-\subsection{Theoretical Analysis}
+\subsection{2. Theoretical Analysis}
+
 \subsubsection{Success Probability}
-Let $P(n)$ be the probability that the algorithm finds a specific minimum cut in a graph of size $n$. The probability that the min cut survives the contraction to $n/\sqrt{2}$ vertices in Step 1 is roughly $1/2$. The recurrence relation for the success probability is:
-\[ P(n) = 1 - \left(1 - \frac{1}{2}P\left(\frac{n}{\sqrt{2}}\right)\right)^2 \]
+Let $P(n)$ be the probability that the algorithm finds a specific minimum cut in a graph of size $n$.
+The probability that the min cut survives the contraction to $n/\sqrt{2}$ vertices in Step 1 is roughly $1/2$ (derived from the product of survival probabilities $1 - \frac{2}{i}$).
+The recurrence relation for the success probability is:
+$$ P(n) = 1 - \left( 1 - \frac{1}{2} P\left(\frac{n}{\sqrt{2}}\right) \right)^2 $$
 Solving this recurrence yields:
-\[ P(n) = \Omega\left(\frac{1}{\log n}\right) \]
+$$ P(n) = \Omega\left(\frac{1}{\log n}\right) $$
 This is exponentially better than the $\Omega(1/n^2)$ probability of the Basic Karger algorithm. Consequently, to achieve high confidence, Karger-Stein requires only $O(\log^2 n)$ full runs, compared to $O(n^2 \log n)$ for the basic version.
 
 \subsubsection{Time Complexity}
 The runtime $T(n)$ satisfies the recurrence:
-\[ T(n) = 2T\left(\frac{n}{\sqrt{2}}\right) + O(n^2) \]
-where $O(n^2)$ is the cost of the contraction in Step 1. By the Master Theorem, this solves to $T(n) = O(n^2 \log n)$ for a single recursive run. The total time for a reliable solution (repeating $O(\log^2 n)$ times) is:
-\[ \text{Total Time} = O(n^2 \log^3 n) \]
-This is significantly faster than the $O(n^4 \log n)$ required for the reliable Basic Karger algorithm.
+$$ T(n) = 2 T\left(\frac{n}{\sqrt{2}}\right) + O(n^2) $$
+where $O(n^2)$ is the cost of the contraction in Step 1. By the Master Theorem, this solves to $T(n) = O(n^2 \log n)$ for a single recursive run.
+The total time for a reliable solution (repeating $O(\log^2 n)$ times) is:
+$$ \textbf{Total Time} = O(n^2 \log^3 n) $$
+This is significantly faster than the $O(n^4 \log n)$ required for the reliable Basic Karger algorithm (assuming a simple adjacency matrix or edge list implementation).
 
 \subsection{Empirical Comparison Results}
+
 We compared both algorithms on the "Needle in a Haystack" dataset ($n=50$), a dense graph constructed to maximize the probability of error for the Basic algorithm.
 
 \subsubsection{Success Rate Comparison}
+
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.45\textwidth]{karger_success.png}
-    \includegraphics[width=0.45\textwidth]{karger_stein.png}
-    \caption{Left: Basic Karger Success Rate. Right: Karger-Stein Success Rate (n=50).}
+    % Ensure these filenames match what you uploaded
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{typicalkargers_success_vs_iterations.png}
+        \caption{Basic Karger Success Rate ($n=50$).}
+        \label{fig:basic_success}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{stein_success_vs_iterations.png}
+        \caption{Karger-Stein Success Rate ($n=50$).}
+        \label{fig:stein_success}
+    \end{minipage}
 \end{figure}
-The difference in reliability is evident. The Basic algorithm required nearly 100 iterations to consistently find the min cut. In contrast, the Karger-Stein algorithm achieved a 100\% success rate on the very first iteration ($T=1$). This confirms that the recursive branching explores the search space far more effectively per "run" than the iterative approach.
+
+As shown in Figures \ref{fig:basic_success} and \ref{fig:stein_success}, the difference in reliability is evident. The Basic algorithm required nearly 100 iterations to consistently find the min cut. In contrast, the Karger-Stein algorithm achieved a \textbf{100\% success rate on the very first iteration ($T=1$)}. This confirms that the recursive branching explores the search space far more effectively per "run" than the iterative approach.
 
 \subsubsection{Runtime Comparison \& Overhead Analysis}
-We also compared the wall-clock time for both algorithms on graphs of size $n=10$ to 50.
 
-\textbf{Critical Observation:} While Karger-Stein is theoretically superior, our empirical results for $n=50$ showed that Karger-Stein ($\approx 375$ ms) was actually slightly slower than Basic Karger ($\approx 260$ ms).
-This counter-intuitive result is due to constant-factor overhead.
+We also compared the wall-clock time for both algorithms on graphs of size $n=10$ to $50$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{stein_runtime_vs_size.png}
+    \caption{Runtime of Karger-Stein (100 runs) vs. Simple Graph Sizes}
+    \label{fig:stein_runtime}
+\end{figure}
+
+\textbf{Critical Observation:} While Karger-Stein is theoretically superior, our empirical results for $n=50$ showed that Karger-Stein ($\approx 375$ms) was actually slightly slower than Basic Karger ($\approx 260$ms).
+
+This counter-intuitive result is due to \textbf{constant-factor overhead}.
 \begin{itemize}
     \item \textbf{Basic Karger:} Extremely lightweight. Contraction is a simple loop over an edge list.
     \item \textbf{Karger-Stein:} Heavy. Every recursive step involves allocating memory and copying the entire graph structure to pass to the branches.
 \end{itemize}
 For small graphs ($n \le 50$), the CPU cost of these memory operations outweighs the algorithmic gain. Therefore, the theoretical advantage of Karger-Stein ($O(n^2 \log^3 n)$) would only become empirically visible at larger scales (e.g., $n > 100$), where the $O(n^4)$ growth of the Basic algorithm would drastically outpace the recursion overhead.
+
+\section{References}
+\begin{enumerate}
+\item S. Dasgupta, C. H. Papadimitriou, and U. V. Vazirani. \textit{Algorithms}. McGraw-Hill, 2008.
+\item Karger, D. R. (1993). "Global Min-cuts in RNC, and Other Ramifications of a Simple Min-Cut Algorithm."
+\item Karger, D. R., \& Stein, C. (1996). "A new approach to the minimum cut problem." \textit{Journal of the ACM}.
+\end{enumerate}
+
+\newpage
 
 \newpage
 
